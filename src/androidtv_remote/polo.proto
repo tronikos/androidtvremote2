@@ -1,0 +1,122 @@
+// Copied from https://android.googlesource.com/platform/external/google-tv-pairing-protocol/+/refs/heads/master/proto/polo.proto
+// with a change in OuterMessage based on https://github.com/louis49/androidtv-remote/blob/main/src/pairing/pairingmessage.proto
+
+// Copyright 2009 Google Inc. All Rights Reserved.
+
+syntax = "proto2";
+
+package polo.wire.protobuf;
+
+option java_outer_classname = "PoloProto";
+option java_package = "com.google.polo.wire.protobuf";
+option optimize_for = LITE_RUNTIME;
+
+// OuterMessage - base outer message type used in the protocol.
+
+message OuterMessage {
+  // Protocol status states.
+  enum Status {
+    STATUS_OK = 200;
+    STATUS_ERROR = 400;
+    STATUS_BAD_CONFIGURATION = 401;
+    STATUS_BAD_SECRET = 402;
+  }
+
+  required uint32 protocol_version = 1 [default = 1];
+
+  // Protocol status. Any status other than STATUS_OK implies a fault.
+  required Status status = 2;
+
+  // Initialization phase
+  optional PairingRequest pairing_request = 10;
+  optional PairingRequestAck pairing_request_ack = 11;
+
+  // Configuration phase
+  optional Options options = 20;
+  optional Configuration configuration = 30;
+  optional ConfigurationAck configuration_ack = 31;
+
+  // Pairing phase
+  optional Secret secret = 40;
+  optional SecretAck secret_ack = 41;
+}
+
+
+//
+// Initialization messages
+//
+
+message PairingRequest {
+  // String name of the service to pair with.  The name used should be an
+  // established convention of the application protocol.
+  required string service_name = 1;
+
+  // Descriptive name of the client.
+  optional string client_name = 2;
+}
+
+message PairingRequestAck {
+  // Descriptive name of the server.
+  optional string server_name = 1;
+}
+
+
+//
+// Configuration messages
+//
+
+message Options {
+  message Encoding {
+    enum EncodingType {
+      ENCODING_TYPE_UNKNOWN = 0;
+      ENCODING_TYPE_ALPHANUMERIC = 1;
+      ENCODING_TYPE_NUMERIC = 2;
+      ENCODING_TYPE_HEXADECIMAL = 3;
+      ENCODING_TYPE_QRCODE = 4;
+    }
+
+    required EncodingType type = 1;
+    required uint32 symbol_length = 2;
+  }
+
+  enum RoleType {
+    ROLE_TYPE_UNKNOWN = 0;
+    ROLE_TYPE_INPUT = 1;
+    ROLE_TYPE_OUTPUT = 2;
+  }
+
+  // List of encodings this endpoint accepts when serving as an input device.
+  repeated Encoding input_encodings = 1;
+
+  // List of encodings this endpoint can generate as an output device.
+  repeated Encoding output_encodings = 2;
+
+  // Preferred role, if any.
+  optional RoleType preferred_role = 3;
+}
+
+message Configuration {
+  // The encoding to be used in this session.
+  required Options.Encoding encoding = 1;
+
+  // The role of the client (ie, the one initiating pairing). This implies the
+  // peer (server) acts as the complementary role.
+  required Options.RoleType client_role = 2;
+}
+
+message ConfigurationAck {
+}
+
+
+//
+// Pairing messages
+//
+
+message Secret {
+  required bytes secret = 1;
+}
+
+message SecretAck {
+  required bytes secret = 1;
+}
+

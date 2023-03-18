@@ -8,15 +8,14 @@ from __future__ import annotations
 
 import asyncio
 from collections.abc import Callable
-import logging
 
 from google.protobuf import text_format
 from google.protobuf.message import DecodeError
 
 from .base import ProtobufProtocol
+from .const import LOGGER
 from .remotemessage_pb2 import RemoteDirection, RemoteKeyCode, RemoteMessage
 
-_LOGGER = logging.getLogger(__name__)
 LOG_PING_REQUESTS = False
 
 
@@ -93,10 +92,10 @@ class RemoteProtocol(ProtobufProtocol):
         try:
             msg.ParseFromString(raw_msg)
         except DecodeError as exc:
-            _LOGGER.debug("Couldn't parse as RemoteMessage. %s", exc)
+            LOGGER.debug("Couldn't parse as RemoteMessage. %s", exc)
             return
         if LOG_PING_REQUESTS or not msg.HasField("remote_ping_request"):
-            _LOGGER.debug(
+            LOGGER.debug(
                 "Received: %s", text_format.MessageToString(msg, as_one_line=True)
             )
 
@@ -138,7 +137,7 @@ class RemoteProtocol(ProtobufProtocol):
             new_msg.remote_ping_response.val1 = msg.remote_ping_request.val1
             log_send = LOG_PING_REQUESTS
         else:
-            _LOGGER.debug(
+            LOGGER.debug(
                 "Unhandled: %s", text_format.MessageToString(msg, as_one_line=True)
             )
 

@@ -1,11 +1,11 @@
 [project]
-name = "androidtv-remote"
-version = "0.0.1"
+name = "androidtvremote2"
+version = "0.0.2"
 license = {text = "Apache-2.0"}
 authors = [
     { name="tronikos", email="tronikos@gmail.com" },
 ]
-description = "A Python library for interacting with Android TV using the Android TV Remote protocol"
+description = "A Python library for interacting with Android TV using the Android TV Remote protocol v2"
 readme = "README.md"
 requires-python = ">=3.7"
 dependencies = [
@@ -14,8 +14,8 @@ dependencies = [
 ]
 
 [project.urls]
-"Homepage" = "https://github.com/tronikos/androidtv_remote"
-"Bug Tracker" = "https://github.com/tronikos/androidtv_remote/issues"
+"Homepage" = "https://github.com/tronikos/androidtvremote2"
+"Bug Tracker" = "https://github.com/tronikos/androidtvremote2/issues"
 
 [build-system]
 requires = ["setuptools"]

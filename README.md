@@ -1,6 +1,6 @@
-# androidtv_remote
+# androidtvremote2
 
-A Python library for interacting with Android TV using the Android TV Remote protocol. This is the same protocol the Google TV app is using. It doesn't require ADB or enabling developer tools on the Android TV device.
+A Python library for interacting with Android TV using the Android TV Remote protocol v2. This is the same protocol the Google TV app is using. It doesn't require ADB or enabling developer tools on the Android TV device.
 
 For a list of the most popular TV commands you can send, see [TvKeys.txt](TvKeys.txt). In addition to commands you can send URLs to open apps registered to handle them.
 
@@ -31,7 +31,7 @@ python -m pip install .
 
 # Generate *_pb2.py from *.proto
 python -m pip install grpcio-tools
-python -m grpc_tools.protoc src/androidtv_remote/*.proto --python_out=src/androidtv_remote -Isrc/androidtv_remote
+python -m grpc_tools.protoc src/androidtvremote2/*.proto --python_out=src/androidtvremote2 -Isrc/androidtvremote2
 
 # Run formatter
 python -m pip install isort black

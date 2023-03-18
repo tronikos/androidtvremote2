@@ -9,7 +9,7 @@ from pynput import keyboard
 from zeroconf import ServiceStateChange, Zeroconf
 from zeroconf.asyncio import AsyncServiceBrowser, AsyncServiceInfo, AsyncZeroconf
 
-from androidtv_remote import (
+from androidtvremote2 import (
     AndroidTVRemote,
     CannotConnect,
     ConnectionClosed,
@@ -151,7 +151,7 @@ async def _pair(remote: AndroidTVRemote):
         try:
             return await remote.async_finish_pairing(pairing_code)
         except InvalidAuth as exc:
-            _LOGGER.error("Enter pairing code. Error: %s", exc)
+            _LOGGER.error("Invalid pairing code. Error: %s", exc)
             continue
         except ConnectionClosed as exc:
             _LOGGER.error("Initialize pair again. Error: %s", exc)

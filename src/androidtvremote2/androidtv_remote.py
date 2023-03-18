@@ -4,19 +4,17 @@ from __future__ import annotations
 
 import asyncio
 from collections.abc import Callable
-import logging
 import os
 import ssl
 
 from cryptography import x509
 
 from .certificate_generator import generate_selfsigned_cert
+from .const import LOGGER
 from .exceptions import CannotConnect, ConnectionClosed, InvalidAuth
 from .pairing import PairingProtocol
 from .remote import RemoteProtocol
 from .remotemessage_pb2 import RemoteDirection
-
-_LOGGER = logging.getLogger(__name__)
 
 
 class AndroidTVRemote:
@@ -148,7 +146,7 @@ class AndroidTVRemote:
         try:
             ssl_context.load_cert_chain(self._certfile, self._keyfile)
         except FileNotFoundError as exc:
-            _LOGGER.debug("Missing certificate. Error: %s", exc)
+            LOGGER.debug("Missing certificate. Error: %s", exc)
             raise InvalidAuth from exc
         on_con_lost = self._loop.create_future()
         on_remote_started = self._loop.create_future()
@@ -169,7 +167,7 @@ class AndroidTVRemote:
                 ssl=ssl_context,
             )
         except OSError as exc:
-            _LOGGER.debug(
+            LOGGER.debug(
                 "Couldn't connect to %s:%s. Error: %s", self.host, self._api_port, exc
             )
             raise CannotConnect(
@@ -181,7 +179,7 @@ class AndroidTVRemote:
         )
         if on_con_lost.done():
             con_lost_exc = on_con_lost.result()
-            _LOGGER.debug(
+            LOGGER.debug(
                 "Couldn't connect to %s:%s. Error: %s",
                 self.host,
                 self._api_port,
@@ -197,9 +195,9 @@ class AndroidTVRemote:
         while self._remote_message_protocol:
             exc = await self._remote_message_protocol.on_con_lost
             self._on_is_available_updated(False)
-            _LOGGER.debug("Disconnected from %s. Error: %s", self.host, exc)
+            LOGGER.debug("Disconnected from %s. Error: %s", self.host, exc)
             delay_seconds = 10
-            _LOGGER.debug(
+            LOGGER.debug(
                 "Trying to reconnect to %s in %s seconds", self.host, delay_seconds
             )
             while self._remote_message_protocol:
@@ -210,14 +208,14 @@ class AndroidTVRemote:
                     break
                 except CannotConnect as exc:
                     delay_seconds = min(2 * delay_seconds, 300)
-                    _LOGGER.debug(
+                    LOGGER.debug(
                         "Couldn't reconnect to %s. Will retry in %s seconds. Error: %s",
                         self.host,
                         delay_seconds,
                         exc,
                     )
                 except InvalidAuth as exc:
-                    _LOGGER.debug(
+                    LOGGER.debug(
                         "Couldn't reconnect to %s. Won't retry. Error: %s",
                         self.host,
                         exc,
@@ -256,7 +254,7 @@ class AndroidTVRemote:
                 self.host, self._api_port, ssl=ssl_context
             )
         except OSError as exc:
-            _LOGGER.debug(
+            LOGGER.debug(
                 "Couldn't connect to %s:%s. %s", self.host, self._api_port, exc
             )
             raise CannotConnect from exc
@@ -300,7 +298,7 @@ class AndroidTVRemote:
                 ssl=ssl_context,
             )
         except OSError as exc:
-            _LOGGER.debug(
+            LOGGER.debug(
                 "Couldn't connect to %s:%s. %s", self.host, self._pair_port, exc
             )
             raise CannotConnect from exc
@@ -314,7 +312,7 @@ class AndroidTVRemote:
         :raises InvalidAuth: if pairing was unsuccessful.
         """
         if not self._pairing_message_protocol:
-            _LOGGER.debug("Called async_finish_pairing after disconnect")
+            LOGGER.debug("Called async_finish_pairing after disconnect")
             raise ConnectionClosed("Called async_finish_pairing after disconnect")
         await self._pairing_message_protocol.async_finish_pairing(pairing_code)
         self.disconnect()
@@ -333,7 +331,7 @@ class AndroidTVRemote:
         :raises ConnectionClosed: if client is disconnected.
         """
         if not self._remote_message_protocol:
-            _LOGGER.debug("Called send_key_command after disconnect")
+            LOGGER.debug("Called send_key_command after disconnect")
             raise ConnectionClosed("Called send_key_command after disconnect")
         self._remote_message_protocol.send_key_command(key_code, direction)
 
@@ -345,6 +343,6 @@ class AndroidTVRemote:
         :raises ConnectionClosed: if client is disconnected.
         """
         if not self._remote_message_protocol:
-            _LOGGER.debug("Called send_launch_app_command after disconnect")
+            LOGGER.debug("Called send_launch_app_command after disconnect")
             raise ConnectionClosed("Called send_launch_app_command after disconnect")
         self._remote_message_protocol.send_launch_app_command(app_link)

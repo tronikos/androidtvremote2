@@ -1,1 +1,1 @@
-"""Tests for androidtv_remote."""
+"""Tests for androidtvremote2."""

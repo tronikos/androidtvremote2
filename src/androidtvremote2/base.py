@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import asyncio
-import logging
 from typing import cast
 
 from google.protobuf import text_format
@@ -11,7 +10,7 @@ from google.protobuf.internal.decoder import _DecodeVarint
 from google.protobuf.internal.encoder import _EncodeVarint
 from google.protobuf.message import Message
 
-_LOGGER = logging.getLogger(__name__)
+from .const import LOGGER
 
 
 class ProtobufProtocol(asyncio.Protocol):
@@ -29,19 +28,19 @@ class ProtobufProtocol(asyncio.Protocol):
 
     def connection_made(self, transport: asyncio.BaseTransport) -> None:
         """Store transport when a connection is made."""
-        _LOGGER.debug("Connected to %s", transport.get_extra_info("peername"))
+        LOGGER.debug("Connected to %s", transport.get_extra_info("peername"))
         self.transport = cast(asyncio.Transport, transport)
 
     def connection_lost(self, exc: Exception | None) -> None:
         """Notify on_con_lost when the connection is lost or closed."""
-        _LOGGER.debug("Connection lost. Error: %s", exc)
+        LOGGER.debug("Connection lost. Error: %s", exc)
         if not self.on_con_lost.done():
             self.on_con_lost.set_result(exc)
 
     def data_received(self, data: bytes) -> None:
         """Receive data until a full protobuf is received and pass it to _handle_message."""
         if not data:
-            _LOGGER.debug("No data received")
+            LOGGER.debug("No data received")
             return
         if self._raw_msg_len < 0:
             self._raw_msg_len, pos = _DecodeVarint(data, 0)
@@ -56,7 +55,7 @@ class ProtobufProtocol(asyncio.Protocol):
             raw_msg = self._raw_msg
             self._raw_msg_len = -1
             self._raw_msg = b""
-            # _LOGGER.debug("Received: %s", raw_msg)
+            # LOGGER.debug("Received: %s", raw_msg)
             self._handle_message(raw_msg)
             if remaining_data:
                 self.data_received(remaining_data)
@@ -70,11 +69,11 @@ class ProtobufProtocol(asyncio.Protocol):
         This does not block; it buffers the data and arranges for it to be sent out asynchronously.
         """
         if should_debug_log:
-            _LOGGER.debug(
+            LOGGER.debug(
                 "Sending: %s", text_format.MessageToString(msg, as_one_line=True)
             )
         if not self.transport or self.transport.is_closing():
-            _LOGGER.debug("Connection is closed!")
+            LOGGER.debug("Connection is closed!")
             return
         _EncodeVarint(self.transport.write, msg.ByteSize())
         self.transport.write(msg.SerializeToString())

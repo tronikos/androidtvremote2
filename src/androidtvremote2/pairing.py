@@ -9,17 +9,15 @@ from __future__ import annotations
 
 import asyncio
 import hashlib
-import logging
 
 from cryptography import x509
 from google.protobuf import text_format
 from google.protobuf.message import DecodeError
 
 from .base import ProtobufProtocol
+from .const import LOGGER
 from .exceptions import ConnectionClosed, InvalidAuth
 from .polo_pb2 import Options, OuterMessage
-
-_LOGGER = logging.getLogger(__name__)
 
 
 def _create_message():
@@ -91,12 +89,12 @@ class PairingProtocol(ProtobufProtocol):
         """
         self._raise_if_not_connected()
         if not pairing_code or len(pairing_code) != 6:
-            _LOGGER.debug("Length of PIN (%s) should be exactly 6", pairing_code)
+            LOGGER.debug("Length of PIN (%s) should be exactly 6", pairing_code)
             raise InvalidAuth("Length of PIN should be exactly 6")
         try:
             bytes.fromhex(pairing_code)
         except ValueError as exc:
-            _LOGGER.debug("PIN (%s) should be in hex", pairing_code)
+            LOGGER.debug("PIN (%s) should be in hex", pairing_code)
             raise InvalidAuth("PIN should be in hex") from exc
 
         with open(self._certfile, "rb") as fp:
@@ -119,7 +117,7 @@ class PairingProtocol(ProtobufProtocol):
         hash_result = h.digest()
 
         if hash_result[0] != int(pairing_code[0:2], 16):
-            _LOGGER.debug("Unexpected hash for pairing code: %s", pairing_code)
+            LOGGER.debug("Unexpected hash for pairing code: %s", pairing_code)
             raise InvalidAuth(f"Unexpected hash for pairing code: {pairing_code}")
 
         msg = _create_message()
@@ -146,7 +144,7 @@ class PairingProtocol(ProtobufProtocol):
     def _raise_if_not_connected(self):
         """Raise ConnectionClosed if not connected."""
         if self.transport is None or self.transport.is_closing():
-            _LOGGER.debug("Connection has been lost, cannot pair")
+            LOGGER.debug("Connection has been lost, cannot pair")
             raise ConnectionClosed("Connection has been lost")
 
     def _handle_message(self, raw_msg: bytes):
@@ -155,15 +153,13 @@ class PairingProtocol(ProtobufProtocol):
         try:
             msg.ParseFromString(raw_msg)
         except DecodeError as exc:
-            _LOGGER.debug("Couldn't parse as OuterMessage. %s", exc)
+            LOGGER.debug("Couldn't parse as OuterMessage. %s", exc)
             self._handle_error(exc)
             return
-        _LOGGER.debug(
-            "Received: %s", text_format.MessageToString(msg, as_one_line=True)
-        )
+        LOGGER.debug("Received: %s", text_format.MessageToString(msg, as_one_line=True))
 
         if msg.status != OuterMessage.Status.STATUS_OK:
-            _LOGGER.debug(
+            LOGGER.debug(
                 "Received status: %s in msg: %s",
                 msg.status,
                 text_format.MessageToString(msg, as_one_line=True),
@@ -193,7 +189,7 @@ class PairingProtocol(ProtobufProtocol):
                 self._on_pairing_finished.set_result(True)
             return
         else:
-            _LOGGER.debug(
+            LOGGER.debug(
                 "Unhandled msg: %s", text_format.MessageToString(msg, as_one_line=True)
             )
             self._handle_error(

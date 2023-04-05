@@ -10,6 +10,7 @@ from __future__ import annotations
 import asyncio
 import hashlib
 
+import aiofiles
 from cryptography import x509
 from google.protobuf import text_format
 from google.protobuf.message import DecodeError
@@ -97,8 +98,8 @@ class PairingProtocol(ProtobufProtocol):
             LOGGER.debug("PIN (%s) should be in hex", pairing_code)
             raise InvalidAuth("PIN should be in hex") from exc
 
-        with open(self._certfile, "rb") as fp:
-            client_cert = x509.load_pem_x509_certificate(fp.read())
+        async with aiofiles.open(self._certfile, "rb") as fp:
+            client_cert = x509.load_pem_x509_certificate(await fp.read())
         client_modulus, client_exponent = _get_modulus_and_exponent(client_cert)
 
         assert self.transport

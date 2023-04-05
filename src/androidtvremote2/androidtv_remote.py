@@ -7,6 +7,7 @@ from collections.abc import Callable
 import os
 import ssl
 
+import aiofiles
 from cryptography import x509
 
 from .certificate_generator import generate_selfsigned_cert
@@ -121,7 +122,7 @@ class AndroidTVRemote:
         """Add a callback for when the Android TV is ready to receive commands or is unavailable."""
         self._is_available_updated_callbacks.append(callback)
 
-    def generate_cert_if_missing(self) -> bool:
+    async def async_generate_cert_if_missing(self) -> bool:
         """Generate client certificate and public key if missing.
 
         :returns: True if a new certificate was generated.
@@ -129,10 +130,10 @@ class AndroidTVRemote:
         if os.path.isfile(self._certfile) and os.path.isfile(self._keyfile):
             return False
         cert_pem, key_pem = generate_selfsigned_cert(self._client_name)
-        with open(self._certfile, "w", encoding="utf-8") as out:
-            out.write(cert_pem.decode("utf-8"))
-        with open(self._keyfile, "w", encoding="utf-8") as out:
-            out.write(key_pem.decode("utf-8"))
+        async with aiofiles.open(self._certfile, "w", encoding="utf-8") as out:
+            await out.write(cert_pem.decode("utf-8"))
+        async with aiofiles.open(self._keyfile, "w", encoding="utf-8") as out:
+            await out.write(key_pem.decode("utf-8"))
         return True
 
     async def async_connect(self):

@@ -140,7 +140,7 @@ async def _pair(remote: AndroidTVRemote):
     if (
         input(
             f"Do you want to pair with {remote.host} {name} {mac}"
-            "(this will turn on the Android TV)? y/n: "
+            " (this will turn on the Android TV)? y/n: "
         )
         != "y"
     ):
@@ -193,7 +193,7 @@ async def _main():
 
     remote = AndroidTVRemote(args.client_name, args.certfile, args.keyfile, host)
 
-    if remote.generate_cert_if_missing():
+    if await remote.async_generate_cert_if_missing():
         _LOGGER.info("Generated new certificate")
         await _pair(remote)
 

@@ -162,6 +162,7 @@ class AndroidTVRemote:
                     self._on_is_on_updated,
                     self._on_current_app_updated,
                     self._on_volume_info_updated,
+                    self._loop,
                 ),
                 self.host,
                 self._api_port,

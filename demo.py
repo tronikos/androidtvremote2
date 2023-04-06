@@ -235,4 +235,4 @@ async def _main():
     await _bind_keyboard(remote)
 
 
-asyncio.run(_main())
+asyncio.run(_main(), debug=True)

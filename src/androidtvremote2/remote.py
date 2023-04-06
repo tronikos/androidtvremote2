@@ -34,6 +34,7 @@ class RemoteProtocol(ProtobufProtocol):
         on_is_on_updated: Callable,
         on_current_app_updated: Callable,
         on_volume_info_updated: Callable,
+        loop: asyncio.AbstractEventLoop,
     ) -> None:
         """Initialize.
 
@@ -42,6 +43,7 @@ class RemoteProtocol(ProtobufProtocol):
         :param on_is_on_updated: callback for when is_on is updated.
         :param on_current_app_updated: callback for when current_app is updated.
         :param on_volume_info_updated: callback for when volume_info is updated.
+        :param loop: event loop.
         """
         super().__init__(on_con_lost)
         self._on_remote_started = on_remote_started
@@ -53,6 +55,9 @@ class RemoteProtocol(ProtobufProtocol):
         self.current_app = ""
         self.device_info: dict[str, str] = {}
         self.volume_info: dict[str, str | bool] = {}
+        self._loop = loop
+        self._idle_disconnect_task: asyncio.Task | None = None
+        self._reset_idle_disconnect_task()
 
     def send_key_command(
         self, key_code: int | str, direction: int | str = RemoteDirection.SHORT
@@ -88,6 +93,7 @@ class RemoteProtocol(ProtobufProtocol):
 
     def _handle_message(self, raw_msg):
         """Handle a message from the server."""
+        self._reset_idle_disconnect_task()
         msg = RemoteMessage()
         try:
             msg.ParseFromString(raw_msg)
@@ -143,3 +149,18 @@ class RemoteProtocol(ProtobufProtocol):
 
         if new_msg != RemoteMessage():
             self._send_message(new_msg, log_send)
+
+    def _reset_idle_disconnect_task(self):
+        if self._idle_disconnect_task is not None:
+            self._idle_disconnect_task.cancel()
+        self._idle_disconnect_task = self._loop.create_task(
+            self._async_idle_disconnect()
+        )
+
+    async def _async_idle_disconnect(self):
+        # Disconnect if there is no message from the server within
+        # 16 seconds. Pings are every 5 seconds. This is similar to
+        # the server behavior that closes connections after 3
+        # unanswered pings.
+        await asyncio.sleep(16)
+        self.transport.close()

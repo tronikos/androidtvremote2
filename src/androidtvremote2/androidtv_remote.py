@@ -198,7 +198,7 @@ class AndroidTVRemote:
             exc = await self._remote_message_protocol.on_con_lost
             self._on_is_available_updated(False)
             LOGGER.debug("Disconnected from %s. Error: %s", self.host, exc)
-            delay_seconds = 10
+            delay_seconds = 0.1
             LOGGER.debug(
                 "Trying to reconnect to %s in %s seconds", self.host, delay_seconds
             )

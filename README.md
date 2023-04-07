@@ -51,7 +51,7 @@ pytest
 
 # Run demo
 python -m pip install pynput zeroconf
-python demo.py
+python src/demo.py
 
 # Build package
 python -m pip install build

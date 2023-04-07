@@ -69,9 +69,9 @@ class AndroidTVRemote:
             for callback in self._volume_info_updated_callbacks:
                 callback(volume_info)
 
-        def is_available_updated(is_available: bool):
+        def is_available_updated(is_available: bool, exc: Exception | None):
             for callback in self._is_available_updated_callbacks:
-                callback(is_available)
+                callback(is_available, exc)
 
         self._on_is_on_updated = is_on_updated
         self._on_current_app_updated = current_app_updated
@@ -196,7 +196,7 @@ class AndroidTVRemote:
     ) -> None:
         while self._remote_message_protocol:
             exc = await self._remote_message_protocol.on_con_lost
-            self._on_is_available_updated(False)
+            self._on_is_available_updated(False, exc)
             LOGGER.debug("Disconnected from %s. Error: %s", self.host, exc)
             delay_seconds = 0.1
             LOGGER.debug(
@@ -206,7 +206,7 @@ class AndroidTVRemote:
                 await asyncio.sleep(delay_seconds)
                 try:
                     await self.async_connect()
-                    self._on_is_available_updated(True)
+                    self._on_is_available_updated(True, None)
                     break
                 except CannotConnect as exc:
                     delay_seconds = min(2 * delay_seconds, 300)

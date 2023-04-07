@@ -71,6 +71,7 @@ class RemoteProtocol(ProtobufProtocol):
         :param direction: "SHORT" (default) or "START_LONG" or "END_LONG".
         :raises ValueError: if key_code in str or direction isn't known.
         """
+        self._reset_idle_disconnect_task()
         msg = RemoteMessage()
         if isinstance(key_code, str):
             if not key_code.startswith("KEYCODE_"):
@@ -87,6 +88,7 @@ class RemoteProtocol(ProtobufProtocol):
 
         This does not block; it buffers the data and arranges for it to be sent out asynchronously.
         """
+        self._reset_idle_disconnect_task()
         msg = RemoteMessage()
         msg.remote_app_link_launch_request.app_link = app_link
         self._send_message(msg)
@@ -158,9 +160,9 @@ class RemoteProtocol(ProtobufProtocol):
         )
 
     async def _async_idle_disconnect(self):
-        # Disconnect if there is no message from the server within
-        # 16 seconds. Pings are every 5 seconds. This is similar to
-        # the server behavior that closes connections after 3
+        # Disconnect if there is no message from the server or client within
+        # 16 seconds. Server pings every 5 seconds if there is no command sent.
+        # This is similar to the server behavior that closes connections after 3
         # unanswered pings.
         await asyncio.sleep(16)
         self.transport.close()

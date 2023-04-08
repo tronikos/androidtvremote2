@@ -165,6 +165,7 @@ class RemoteProtocol(ProtobufProtocol):
         # This is similar to the server behavior that closes connections after 3
         # unanswered pings.
         await asyncio.sleep(16)
+        LOGGER.debug("Closing idle connection")
         self.transport.close()
         if not self.on_con_lost.done():
             self.on_con_lost.set_result(Exception("Closed idle connection"))

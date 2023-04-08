@@ -1,6 +1,6 @@
 # androidtvremote2
 
-A Python library for interacting with Android TV using the Android TV Remote protocol v2. This is the same protocol the Google TV app is using. It doesn't require ADB or enabling developer tools on the Android TV device.
+A Python library for interacting with Android TV using the Android TV Remote protocol v2. This is the same protocol the Google TV mobile app is using. It doesn't require ADB or enabling developer tools on the Android TV device. It only requires the [Android TV Remote Service](https://play.google.com/store/apps/details?id=com.google.android.tv.remote.service) that comes pre-installed on most Android TV devices.
 
 For a list of the most common commands you can send to the Android TV see: [TvKeys](https://github.com/tronikos/androidtvremote2/blob/main/TvKeys.txt).
 For a full list see [here](https://github.com/tronikos/androidtvremote2/blob/main/src/androidtvremote2/remotemessage.proto#L90).
@@ -15,7 +15,7 @@ In addition to commands you can send URLs to open apps registered to handle them
 
 ## Example
 
-See [demo.py](https://github.com/tronikos/androidtvremote2/blob/main/demo.py)
+See [demo.py](https://github.com/tronikos/androidtvremote2/blob/main/src/demo.py)
 
 ## Development environment
 

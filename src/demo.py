@@ -224,8 +224,8 @@ async def _main():
     def volume_info_updated(volume_info):
         _LOGGER.info("Notified that volume_info: %s", volume_info)
 
-    def is_available_updated(is_available, exc):
-        _LOGGER.info("Notified that is_available: %s, exc: %s", is_available, exc)
+    def is_available_updated(is_available):
+        _LOGGER.info("Notified that is_available: %s", is_available)
 
     remote.add_is_on_updated_callback(is_on_updated)
     remote.add_current_app_updated_callback(current_app_updated)

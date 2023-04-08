@@ -16,7 +16,7 @@ from .base import ProtobufProtocol
 from .const import LOGGER
 from .remotemessage_pb2 import RemoteDirection, RemoteKeyCode, RemoteMessage
 
-LOG_PING_REQUESTS = True
+LOG_PING_REQUESTS = False
 
 
 class RemoteProtocol(ProtobufProtocol):

@@ -111,7 +111,10 @@ class AndroidTVRemote:
         self._is_on_updated_callbacks.append(callback)
 
     def remove_is_on_updated_callback(self, callback: Callable) -> None:
-        """Remove is_on_updated callback."""
+        """Remove a callback previously added via add_is_on_updated_callback.
+
+        :raises ValueError: if callback not previously added.
+        """
         self._is_on_updated_callbacks.remove(callback)
 
     def add_current_app_updated_callback(self, callback: Callable) -> None:
@@ -119,7 +122,10 @@ class AndroidTVRemote:
         self._current_app_updated_callbacks.append(callback)
 
     def remove_current_app_updated_callback(self, callback: Callable) -> None:
-        """Remove current_app_updated callback."""
+        """Remove a callback previously added via add_current_app_updated_callback.
+
+        :raises ValueError: if callback not previously added.
+        """
         self._current_app_updated_callbacks.remove(callback)
 
     def add_volume_info_updated_callback(self, callback: Callable) -> None:
@@ -127,7 +133,10 @@ class AndroidTVRemote:
         self._volume_info_updated_callbacks.append(callback)
 
     def remove_volume_info_updated_callback(self, callback: Callable) -> None:
-        """Remove volume_info_updated callback."""
+        """Remove a callback previously added via add_volume_info_updated_callback.
+
+        :raises ValueError: if callback not previously added.
+        """
         self._volume_info_updated_callbacks.remove(callback)
 
     def add_is_available_updated_callback(self, callback: Callable) -> None:
@@ -135,7 +144,10 @@ class AndroidTVRemote:
         self._is_available_updated_callbacks.append(callback)
 
     def remove_is_available_updated_callback(self, callback: Callable) -> None:
-        """Remove is_available_updated callback."""
+        """Remove a callback previously added via add_is_available_updated_callback.
+
+        :raises ValueError: if callback not previously added.
+        """
         self._is_available_updated_callbacks.remove(callback)
 
     async def async_generate_cert_if_missing(self) -> bool:

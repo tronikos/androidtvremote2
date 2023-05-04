@@ -110,17 +110,45 @@ class AndroidTVRemote:
         """Add a callback for when is_on is updated."""
         self._is_on_updated_callbacks.append(callback)
 
+    def remove_is_on_updated_callback(self, callback: Callable) -> None:
+        """Remove a callback previously added via add_is_on_updated_callback.
+
+        :raises ValueError: if callback not previously added.
+        """
+        self._is_on_updated_callbacks.remove(callback)
+
     def add_current_app_updated_callback(self, callback: Callable) -> None:
         """Add a callback for when current_app is updated."""
         self._current_app_updated_callbacks.append(callback)
+
+    def remove_current_app_updated_callback(self, callback: Callable) -> None:
+        """Remove a callback previously added via add_current_app_updated_callback.
+
+        :raises ValueError: if callback not previously added.
+        """
+        self._current_app_updated_callbacks.remove(callback)
 
     def add_volume_info_updated_callback(self, callback: Callable) -> None:
         """Add a callback for when volume_info is updated."""
         self._volume_info_updated_callbacks.append(callback)
 
+    def remove_volume_info_updated_callback(self, callback: Callable) -> None:
+        """Remove a callback previously added via add_volume_info_updated_callback.
+
+        :raises ValueError: if callback not previously added.
+        """
+        self._volume_info_updated_callbacks.remove(callback)
+
     def add_is_available_updated_callback(self, callback: Callable) -> None:
         """Add a callback for when the Android TV is ready to receive commands or is unavailable."""
         self._is_available_updated_callbacks.append(callback)
+
+    def remove_is_available_updated_callback(self, callback: Callable) -> None:
+        """Remove a callback previously added via add_is_available_updated_callback.
+
+        :raises ValueError: if callback not previously added.
+        """
+        self._is_available_updated_callbacks.remove(callback)
 
     async def async_generate_cert_if_missing(self) -> bool:
         """Generate client certificate and public key if missing.

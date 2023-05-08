@@ -237,7 +237,7 @@ class AndroidTVRemote:
                     self._on_is_available_updated(True)
                     break
                 except CannotConnect as exc:
-                    delay_seconds = min(2 * delay_seconds, 300)
+                    delay_seconds = min(2 * delay_seconds, 30)
                     LOGGER.debug(
                         "Couldn't reconnect to %s. Will retry in %s seconds. Error: %s",
                         self.host,

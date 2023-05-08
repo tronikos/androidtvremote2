@@ -135,8 +135,9 @@ async def _host_from_zeroconf(timeout: float) -> str:
     return input("Enter IP address of Android TV to connect to: ").split(":")[0]
 
 
-async def _pair(remote: AndroidTVRemote):
-    name, mac = await remote.async_get_name_and_mac()
+async def _pair(remote: AndroidTVRemote, name: str = None, mac: str = None):
+    if name is None or mac is None:
+        name, mac = await remote.async_get_name_and_mac()
     if (
         input(
             f"Do you want to pair with {remote.host} {name} {mac}"
@@ -183,6 +184,15 @@ async def _main():
         default=3,
     )
     parser.add_argument(
+        "--server-name",
+        help="Retrieved from the server certificate",
+    )
+    parser.add_argument(
+        "--server-mac",
+        help="Retrieved from the server certificate",
+    )
+
+    parser.add_argument(
         "-v", "--verbose", help="enable verbose logging", action="store_true"
     )
     args = parser.parse_args()
@@ -195,7 +205,7 @@ async def _main():
 
     if await remote.async_generate_cert_if_missing():
         _LOGGER.info("Generated new certificate")
-        await _pair(remote)
+        await _pair(remote, args.server_name, args.server_mac)
 
     while True:
         try:

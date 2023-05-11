@@ -278,7 +278,7 @@ class AndroidTVRemote:
 
         :raises CannotConnect: if couldn't connect, e.g. invalid IP address.
         """
-        ssl_context = ssl.SSLContext(ssl.PROTOCOL_SSLv23)
+        ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS)
         try:
             _, writer = await asyncio.open_connection(
                 self.host, self._api_port, ssl=ssl_context

@@ -52,6 +52,7 @@ class AndroidTVRemote:
         self._remote_message_protocol: RemoteProtocol | None = None
         self._pairing_message_protocol: PairingProtocol | None = None
         self._reconnect_task: asyncio.Task | None = None
+        self._ssl_context: ssl.SSLContext | None = None
         self._is_on_updated_callbacks: list[Callable] = []
         self._current_app_updated_callbacks: list[Callable] = []
         self._volume_info_updated_callbacks: list[Callable] = []
@@ -171,12 +172,13 @@ class AndroidTVRemote:
         :raises ConnectionClosed: if connection was lost while waiting for the remote to start.
         :raises InvalidAuth: if pairing is needed first.
         """
-        ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS)
-        try:
-            ssl_context.load_cert_chain(self._certfile, self._keyfile)
-        except FileNotFoundError as exc:
-            LOGGER.debug("Missing certificate. Error: %s", exc)
-            raise InvalidAuth from exc
+        if self._ssl_context is None:
+            self._ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS)
+            try:
+                self._ssl_context.load_cert_chain(self._certfile, self._keyfile)
+            except FileNotFoundError as exc:
+                LOGGER.debug("Missing certificate. Error: %s", exc)
+                raise InvalidAuth from exc
         on_con_lost = self._loop.create_future()
         on_remote_started = self._loop.create_future()
         try:
@@ -194,7 +196,7 @@ class AndroidTVRemote:
                 ),
                 self.host,
                 self._api_port,
-                ssl=ssl_context,
+                ssl=self._ssl_context,
             )
         except OSError as exc:
             LOGGER.debug(

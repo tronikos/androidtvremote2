@@ -27,7 +27,7 @@ async def _bind_keyboard(remote: AndroidTVRemote):
         "\n- space: play/pause"
         "\n- home: go to the home screen"
         "\n- backspace or esc: go back"
-        "\n- delete: power off/one"
+        "\n- delete: power off/on"
         "\n- +/-: volume up/down"
         "\n- 'm': mute"
         "\n- 'y': YouTube"

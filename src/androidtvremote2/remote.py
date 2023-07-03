@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import asyncio
 from collections.abc import Callable
+from enum import IntFlag
 
 from google.protobuf import text_format
 from google.protobuf.message import DecodeError
@@ -17,6 +18,20 @@ from .const import LOGGER
 from .remotemessage_pb2 import RemoteDirection, RemoteKeyCode, RemoteMessage
 
 LOG_PING_REQUESTS = False
+ERROR_SUGGESTION_MSG = (
+    "Try clearing the storage of the Android TV Remove Service system app."
+)
+
+
+class Feature(IntFlag):
+    """Supported features."""
+
+    PING = 2**0
+    KEY = 2**1
+    IME = 2**2
+    POWER = 2**5
+    VOLUME = 2**6
+    APP_LINK = 2**9
 
 
 class RemoteProtocol(ProtobufProtocol):
@@ -35,6 +50,7 @@ class RemoteProtocol(ProtobufProtocol):
         on_current_app_updated: Callable,
         on_volume_info_updated: Callable,
         loop: asyncio.AbstractEventLoop,
+        enable_ime: bool,
     ) -> None:
         """Initialize.
 
@@ -44,13 +60,22 @@ class RemoteProtocol(ProtobufProtocol):
         :param on_current_app_updated: callback for when current_app is updated.
         :param on_volume_info_updated: callback for when volume_info is updated.
         :param loop: event loop.
+        :param enable_ime: Needed for getting current_app.
+               Disable for devices that show 'Use keyboard on mobile device screen'.
         """
         super().__init__(on_con_lost)
         self._on_remote_started = on_remote_started
         self._on_is_on_updated = on_is_on_updated
         self._on_current_app_updated = on_current_app_updated
         self._on_volume_info_updated = on_volume_info_updated
-        self._active_mask = 622
+        self._active_features = (
+            Feature.PING
+            | Feature.KEY
+            | Feature.POWER
+            | Feature.POWER
+            | Feature.APP_LINK
+            | (Feature.IME if enable_ime else 0)
+        )
         self.is_on = False
         self.current_app = ""
         self.device_info: dict[str, str] = {}
@@ -117,15 +142,24 @@ class RemoteProtocol(ProtobufProtocol):
                 "model": cfg.device_info.model,
                 "sw_version": cfg.device_info.app_version,
             }
-            if cfg.code1:
-                self._active_mask = cfg.code1
-            new_msg.remote_configure.code1 = self._active_mask
+            supported_features = Feature(cfg.code1)
+            LOGGER.debug("Device supports: %s", [supported_features])
+            if Feature.KEY not in supported_features:
+                LOGGER.error(
+                    "Device doesn't support sending keys. %s", ERROR_SUGGESTION_MSG
+                )
+            if Feature.APP_LINK not in supported_features:
+                LOGGER.error(
+                    "Device doesn't support sending app links. %s", ERROR_SUGGESTION_MSG
+                )
+            self._active_features &= supported_features
+            new_msg.remote_configure.code1 = self._active_features.value
             new_msg.remote_configure.device_info.unknown1 = 1
             new_msg.remote_configure.device_info.unknown2 = "1"
             new_msg.remote_configure.device_info.package_name = "atvremote"
             new_msg.remote_configure.device_info.app_version = "1.0.0"
         elif msg.HasField("remote_set_active"):
-            new_msg.remote_set_active.active = self._active_mask
+            new_msg.remote_set_active.active = self._active_features
         elif msg.HasField("remote_ime_key_inject"):
             self.current_app = msg.remote_ime_key_inject.app_info.app_package
             self._on_current_app_updated(self.current_app)

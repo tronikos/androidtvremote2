@@ -30,6 +30,7 @@ class AndroidTVRemote:
         api_port: int = 6466,
         pair_port: int = 6467,
         loop: asyncio.AbstractEventLoop | None = None,
+        enable_ime: bool = True,
     ) -> None:
         """Initialize.
 
@@ -40,6 +41,8 @@ class AndroidTVRemote:
         :param api_port: port for connecting and sending commands.
         :param pair_port: port for pairing.
         :param loop: event loop. Used for connections and futures.
+        :param enable_ime: Needed for getting current_app.
+               Disable for devices that show 'Use keyboard on mobile device screen'.
         """
         self._client_name = client_name
         self._certfile = certfile
@@ -48,6 +51,7 @@ class AndroidTVRemote:
         self._api_port = api_port
         self._pair_port = pair_port
         self._loop = loop or asyncio.get_running_loop()
+        self._enable_ime = enable_ime
         self._transport = None
         self._remote_message_protocol: RemoteProtocol | None = None
         self._pairing_message_protocol: PairingProtocol | None = None
@@ -193,6 +197,7 @@ class AndroidTVRemote:
                     self._on_current_app_updated,
                     self._on_volume_info_updated,
                     self._loop,
+                    self._enable_ime,
                 ),
                 self.host,
                 self._api_port,

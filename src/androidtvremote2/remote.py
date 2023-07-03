@@ -72,7 +72,7 @@ class RemoteProtocol(ProtobufProtocol):
             Feature.PING
             | Feature.KEY
             | Feature.POWER
-            | Feature.POWER
+            | Feature.VOLUME
             | Feature.APP_LINK
             | (Feature.IME if enable_ime else 0)
         )

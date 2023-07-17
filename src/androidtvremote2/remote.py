@@ -200,6 +200,7 @@ class RemoteProtocol(ProtobufProtocol):
         # unanswered pings.
         await asyncio.sleep(16)
         LOGGER.debug("Closing idle connection")
-        self.transport.close()
+        if self.transport and not self.transport.is_closing():
+            self.transport.close()
         if not self.on_con_lost.done():
             self.on_con_lost.set_result(Exception("Closed idle connection"))

@@ -216,6 +216,8 @@ class AndroidTVRemote:
             LOGGER.debug(
                 "Couldn't connect to %s:%s. Error: %s", self.host, self._api_port, exc
             )
+            if isinstance(exc, ssl.SSLError):
+                raise InvalidAuth("Need to pair") from exc
             raise CannotConnect(
                 f"Couldn't connect to {self.host}:{self._api_port}"
             ) from exc
@@ -297,11 +299,11 @@ class AndroidTVRemote:
         ssl_context = self._create_ssl_context()
         try:
             _, writer = await asyncio.open_connection(
-                self.host, self._api_port, ssl=ssl_context
+                self.host, self._pair_port, ssl=ssl_context
             )
         except OSError as exc:
             LOGGER.debug(
-                "Couldn't connect to %s:%s. %s", self.host, self._api_port, exc
+                "Couldn't connect to %s:%s. %s", self.host, self._pair_port, exc
             )
             raise CannotConnect from exc
         server_cert_bytes = writer.transport.get_extra_info("ssl_object").getpeercert(
@@ -309,14 +311,19 @@ class AndroidTVRemote:
         )
         writer.close()
         server_cert = x509.load_der_x509_certificate(server_cert_bytes)
-        server_cert_common_name = str(
-            server_cert.subject.get_attributes_for_oid(x509.oid.NameOID.COMMON_NAME)[
-                0
-            ].value
-        )
-        # Example: atvremote/darcy/darcy/SHIELD Android TV/XX:XX:XX:XX:XX:XX
-        parts = server_cert_common_name.split("/")
-        return parts[-2], parts[-1]
+        # NVIDIA SHIELD example:
+        # CN=atvremote/darcy/darcy/SHIELD Android TV/XX:XX:XX:XX:XX:XX
+        # Nexus Player example:
+        # dnQualifier=fugu/fugu/Nexus Player/CN=atvremote/XX:XX:XX:XX:XX:XX
+        common_name = server_cert.subject.get_attributes_for_oid(x509.OID_COMMON_NAME)
+        common_name = common_name[0].value if common_name else ""
+        dn_qualifier = server_cert.subject.get_attributes_for_oid(x509.OID_DN_QUALIFIER)
+        dn_qualifier = dn_qualifier[0].value if dn_qualifier else ""
+        common_name_parts = common_name.split("/")
+        dn_qualifier_parts = dn_qualifier.split("/")
+        name = dn_qualifier_parts[-1] if dn_qualifier else common_name_parts[-2]
+        mac = common_name_parts[-1]
+        return name, mac
 
     async def async_start_pairing(self):
         """Start the pairing process.

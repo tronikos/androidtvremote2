@@ -177,7 +177,9 @@ class AndroidTVRemote:
         :raises InvalidAuth: if pairing is needed first.
         """
         if self._ssl_context is None:
-            self._ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS)
+            self._ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+            self._ssl_context.check_hostname = False
+            self._ssl_context.verify_mode = ssl.VerifyMode.CERT_NONE
             try:
                 self._ssl_context.load_cert_chain(self._certfile, self._keyfile)
             except FileNotFoundError as exc:
@@ -285,7 +287,9 @@ class AndroidTVRemote:
 
         :raises CannotConnect: if couldn't connect, e.g. invalid IP address.
         """
-        ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS)
+        ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+        ssl_context.check_hostname = False
+        ssl_context.verify_mode = ssl.VerifyMode.CERT_NONE
         try:
             _, writer = await asyncio.open_connection(
                 self.host, self._api_port, ssl=ssl_context
@@ -316,7 +320,9 @@ class AndroidTVRemote:
         :raises ConnectionClosed: if connection was lost.
         """
         self.disconnect()
-        ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS)
+        ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+        ssl_context.check_hostname = False
+        ssl_context.verify_mode = ssl.VerifyMode.CERT_NONE
         ssl_context.load_cert_chain(self._certfile, self._keyfile)
         on_con_lost = self._loop.create_future()
         try:

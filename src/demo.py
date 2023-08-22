@@ -19,7 +19,7 @@ from androidtvremote2 import (
 _LOGGER = logging.getLogger(__name__)
 
 
-async def _bind_keyboard(remote: AndroidTVRemote):
+async def _bind_keyboard(remote: AndroidTVRemote) -> None:
     print(
         "\n\nYou can control the connected Android TV with:"
         "\n- arrow keys: move selected item"
@@ -49,11 +49,11 @@ async def _bind_keyboard(remote: AndroidTVRemote):
         keyboard.Key.delete: "POWER",
     }
 
-    def transmit_keys():
-        queue = asyncio.Queue()
+    def transmit_keys() -> asyncio.Queue:
+        queue: asyncio.Queue = asyncio.Queue()
         loop = asyncio.get_event_loop()
 
-        def on_press(key):
+        def on_press(key: keyboard.Key | keyboard.KeyCode | None) -> None:
             loop.call_soon_threadsafe(queue.put_nowait, key)
 
         keyboard.Listener(on_press=on_press).start()
@@ -112,30 +112,30 @@ async def _host_from_zeroconf(timeout: float) -> str:
             if info.properties:
                 print("  Properties:")
                 for key, value in info.properties.items():
-                    print(f"    {key}: {value}")
+                    print("    %s: %s", key, value)
             else:
                 print("  No properties")
         else:
             print("  No info")
         print()
 
-    aiozc = AsyncZeroconf()
+    zc = AsyncZeroconf()
     services = ["_androidtvremote2._tcp.local."]
     print(
         f"\nBrowsing {services} service(s) for {timeout} seconds, press Ctrl-C to exit...\n"
     )
-    aiobrowser = AsyncServiceBrowser(
-        aiozc.zeroconf, services, handlers=[_async_on_service_state_change]
+    browser = AsyncServiceBrowser(
+        zc.zeroconf, services, handlers=[_async_on_service_state_change]
     )
     await asyncio.sleep(timeout)
 
-    await aiobrowser.async_cancel()
-    await aiozc.async_close()
+    await browser.async_cancel()
+    await zc.async_close()
 
     return input("Enter IP address of Android TV to connect to: ").split(":")[0]
 
 
-async def _pair(remote: AndroidTVRemote):
+async def _pair(remote: AndroidTVRemote) -> None:
     name, mac = await remote.async_get_name_and_mac()
     if (
         input(
@@ -158,7 +158,7 @@ async def _pair(remote: AndroidTVRemote):
             return await _pair(remote)
 
 
-async def _main():
+async def _main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--host", help="IP address of Android TV to connect to")
     parser.add_argument(
@@ -215,16 +215,16 @@ async def _main():
     _LOGGER.info("current_app: %s", remote.current_app)
     _LOGGER.info("volume_info: %s", remote.volume_info)
 
-    def is_on_updated(is_on):
+    def is_on_updated(is_on: bool) -> None:
         _LOGGER.info("Notified that is_on: %s", is_on)
 
-    def current_app_updated(current_app):
+    def current_app_updated(current_app: str) -> None:
         _LOGGER.info("Notified that current_app: %s", current_app)
 
-    def volume_info_updated(volume_info):
+    def volume_info_updated(volume_info: dict[str, str | bool]) -> None:
         _LOGGER.info("Notified that volume_info: %s", volume_info)
 
-    def is_available_updated(is_available):
+    def is_available_updated(is_available: bool) -> None:
         _LOGGER.info("Notified that is_available: %s", is_available)
 
     remote.add_is_on_updated_callback(is_on_updated)

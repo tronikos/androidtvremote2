@@ -15,7 +15,7 @@ from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.x509.oid import NameOID
 
 
-def generate_selfsigned_cert(hostname: str):
+def generate_selfsigned_cert(hostname: str) -> tuple[bytes, bytes]:
     """Generate self signed certificate for a hostname.
 
     :return: self signed certificate and public key in PEM format
@@ -28,7 +28,7 @@ def generate_selfsigned_cert(hostname: str):
     name = x509.Name([x509.NameAttribute(NameOID.COMMON_NAME, hostname)])
     alt_names = [x509.DNSName(hostname)]
     san = x509.SubjectAlternativeName(alt_names)
-    basic_contraints = x509.BasicConstraints(ca=True, path_length=0)
+    basic_constraints = x509.BasicConstraints(ca=True, path_length=0)
     now = datetime.utcnow()
     cert = (
         x509.CertificateBuilder()
@@ -38,7 +38,7 @@ def generate_selfsigned_cert(hostname: str):
         .serial_number(1000)
         .not_valid_before(now)
         .not_valid_after(now + timedelta(days=10 * 365))
-        .add_extension(basic_contraints, False)
+        .add_extension(basic_constraints, False)
         .add_extension(san, False)
         .sign(key, hashes.SHA256(), default_backend())
     )

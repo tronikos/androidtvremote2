@@ -21,7 +21,7 @@ from .exceptions import ConnectionClosed, InvalidAuth
 from .polo_pb2 import Options, OuterMessage
 
 
-def _create_message():
+def _create_message() -> OuterMessage:
     """Create an OuterMessage with default values."""
     msg = OuterMessage()
     msg.protocol_version = 2
@@ -29,10 +29,10 @@ def _create_message():
     return msg
 
 
-def _get_modulus_and_exponent(cert):
+def _get_modulus_and_exponent(cert: x509.Certificate) -> tuple[int, int]:
     """Extract modulus and exponent from a certificate."""
-    public_numbers = cert.public_key().public_numbers()
-    return public_numbers.n, public_numbers.e
+    public_numbers = cert.public_key().public_numbers()  # type: ignore[union-attr]
+    return public_numbers.n, public_numbers.e  # type: ignore[union-attr]
 
 
 class PairingProtocol(ProtobufProtocol):
@@ -65,7 +65,7 @@ class PairingProtocol(ProtobufProtocol):
         self._on_pairing_started: asyncio.Future | None = None
         self._on_pairing_finished: asyncio.Future | None = None
 
-    async def async_start_pairing(self):
+    async def async_start_pairing(self) -> None:
         """Start the pairing process.
 
         :raises ConnectionClosed: if connection was lost.
@@ -81,7 +81,7 @@ class PairingProtocol(ProtobufProtocol):
         finally:
             self._on_pairing_started = None
 
-    async def async_finish_pairing(self, pairing_code: str):
+    async def async_finish_pairing(self, pairing_code: str) -> None:
         """Finish the pairing process.
 
         :param pairing_code: pairing code shown on the Android TV.
@@ -130,7 +130,7 @@ class PairingProtocol(ProtobufProtocol):
         finally:
             self._on_pairing_finished = None
 
-    async def _async_wait_for_future_or_con_lost(self, future: asyncio.Future):
+    async def _async_wait_for_future_or_con_lost(self, future: asyncio.Future) -> None:
         """Wait for future to finish or connection to be lost."""
         await asyncio.wait(
             (self.on_con_lost, future), return_when=asyncio.FIRST_COMPLETED
@@ -142,13 +142,13 @@ class PairingProtocol(ProtobufProtocol):
                 return
         self._raise_if_not_connected()
 
-    def _raise_if_not_connected(self):
+    def _raise_if_not_connected(self) -> None:
         """Raise ConnectionClosed if not connected."""
         if self.transport is None or self.transport.is_closing():
             LOGGER.debug("Connection has been lost, cannot pair")
             raise ConnectionClosed("Connection has been lost")
 
-    def _handle_message(self, raw_msg: bytes):
+    def _handle_message(self, raw_msg: bytes) -> None:
         """Handle a message from the server."""
         msg = OuterMessage()
         try:
@@ -202,10 +202,11 @@ class PairingProtocol(ProtobufProtocol):
 
         self._send_message(new_msg)
 
-    def _handle_error(self, exception):
+    def _handle_error(self, exception: Exception) -> None:
         """Handle errors during _handle_message."""
         if self._on_pairing_started and not self._on_pairing_started.done():
             self._on_pairing_started.set_exception(exception)
         if self._on_pairing_finished and not self._on_pairing_finished.done():
             self._on_pairing_finished.set_exception(exception)
-        self.transport.close()
+        if self.transport:
+            self.transport.close()

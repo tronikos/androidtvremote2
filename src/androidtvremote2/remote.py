@@ -39,7 +39,7 @@ class Feature(IntFlag):
 class RemoteProtocol(ProtobufProtocol):
     """Implement remote protocol with an Android TV.
 
-    Messages transmitted between client and server are of type RemoteMessage, see remotegmessage.proto.
+    Messages transmitted between client and server are of type RemoteMessage, see remotemessage.proto.
     Protocol is described in
     https://github.com/Aymkdn/assistant-freebox-cloud/wiki/Google-TV-(aka-Android-TV)-Remote-Control-(v2)
     """
@@ -81,14 +81,14 @@ class RemoteProtocol(ProtobufProtocol):
         self.is_on = False
         self.current_app = ""
         self.device_info: dict[str, str] = {}
-        self.volume_info: dict[str, str | bool] = {}
+        self.volume_info: dict[str, str | bool | int] = {}
         self._loop = loop
         self._idle_disconnect_task: asyncio.Task | None = None
         self._reset_idle_disconnect_task()
 
     def send_key_command(
         self, key_code: int | str, direction: int | str = RemoteDirection.SHORT
-    ):
+    ) -> None:
         """Send a key press to Android TV.
 
         This does not block; it buffers the data and arranges for it to be sent out asynchronously.
@@ -106,11 +106,11 @@ class RemoteProtocol(ProtobufProtocol):
             key_code = RemoteKeyCode.Value(key_code)
         if isinstance(direction, str):
             direction = RemoteDirection.Value(direction)
-        msg.remote_key_inject.key_code = key_code
-        msg.remote_key_inject.direction = direction
+        msg.remote_key_inject.key_code = key_code  # type: ignore[assignment]
+        msg.remote_key_inject.direction = direction  # type: ignore[assignment]
         self._send_message(msg)
 
-    def send_launch_app_command(self, app_link: str):
+    def send_launch_app_command(self, app_link: str) -> None:
         """Launch an app on Android TV.
 
         This does not block; it buffers the data and arranges for it to be sent out asynchronously.
@@ -120,7 +120,7 @@ class RemoteProtocol(ProtobufProtocol):
         msg.remote_app_link_launch_request.app_link = app_link
         self._send_message(msg)
 
-    def _handle_message(self, raw_msg):
+    def _handle_message(self, raw_msg: bytes) -> None:
         """Handle a message from the server."""
         self._reset_idle_disconnect_task()
         msg = RemoteMessage()
@@ -188,14 +188,14 @@ class RemoteProtocol(ProtobufProtocol):
         if new_msg != RemoteMessage():
             self._send_message(new_msg, log_send)
 
-    def _reset_idle_disconnect_task(self):
+    def _reset_idle_disconnect_task(self) -> None:
         if self._idle_disconnect_task is not None:
             self._idle_disconnect_task.cancel()
         self._idle_disconnect_task = self._loop.create_task(
             self._async_idle_disconnect()
         )
 
-    async def _async_idle_disconnect(self):
+    async def _async_idle_disconnect(self) -> None:
         # Disconnect if there is no message from the server or client within
         # 16 seconds. Server pings every 5 seconds if there is no command sent.
         # This is similar to the server behavior that closes connections after 3

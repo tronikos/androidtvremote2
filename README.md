@@ -32,18 +32,12 @@ python -m pip install --upgrade pip
 python -m pip install .
 
 # Generate *_pb2.py from *.proto
-python -m pip install grpcio-tools
-python -m grpc_tools.protoc src/androidtvremote2/*.proto --python_out=src/androidtvremote2 -Isrc/androidtvremote2
+python -m pip install grpcio-tools mypy-protobuf
+python -m grpc_tools.protoc src/androidtvremote2/*.proto --python_out=src/androidtvremote2 --mypy_out=src/androidtvremote2 -Isrc/androidtvremote2
 
-# Run formatter
-python -m pip install isort black
-isort .
-black .
-
-# Run lint
-python -m pip install flake8 ruff
-flake8 .
-ruff .
+# Run formatter, lint, and type checking
+python -m pip install isort black flake8 ruff mypy pydantic
+isort . ; black . ; flake8 . ; ruff . --fix ; mypy --install-types .
 
 # Run tests
 python -m pip install pytest

@@ -52,7 +52,7 @@ class AndroidTVRemote:
         self._pair_port = pair_port
         self._loop = loop or asyncio.get_running_loop()
         self._enable_ime = enable_ime
-        self._transport = None
+        self._transport: asyncio.Transport | None = None
         self._remote_message_protocol: RemoteProtocol | None = None
         self._pairing_message_protocol: PairingProtocol | None = None
         self._reconnect_task: asyncio.Task | None = None
@@ -62,19 +62,19 @@ class AndroidTVRemote:
         self._volume_info_updated_callbacks: list[Callable] = []
         self._is_available_updated_callbacks: list[Callable] = []
 
-        def is_on_updated(is_on: bool):
+        def is_on_updated(is_on: bool) -> None:
             for callback in self._is_on_updated_callbacks:
                 callback(is_on)
 
-        def current_app_updated(current_app: str):
+        def current_app_updated(current_app: str) -> None:
             for callback in self._current_app_updated_callbacks:
                 callback(current_app)
 
-        def volume_info_updated(volume_info: dict[str, str | bool]):
+        def volume_info_updated(volume_info: dict[str, str | bool]) -> None:
             for callback in self._volume_info_updated_callbacks:
                 callback(volume_info)
 
-        def is_available_updated(is_available: bool):
+        def is_available_updated(is_available: bool) -> None:
             for callback in self._is_available_updated_callbacks:
                 callback(is_available)
 
@@ -105,7 +105,7 @@ class AndroidTVRemote:
         return self._remote_message_protocol.device_info
 
     @property
-    def volume_info(self) -> dict[str, str | bool] | None:
+    def volume_info(self) -> dict[str, str | bool | int] | None:
         """Volume info (level, max, muted)."""
         if not self._remote_message_protocol:
             return None
@@ -169,7 +169,7 @@ class AndroidTVRemote:
             await out.write(key_pem.decode("utf-8"))
         return True
 
-    def _create_ssl_context(self):
+    def _create_ssl_context(self) -> ssl.SSLContext:
         if self._ssl_context:
             return self._ssl_context
         ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
@@ -184,7 +184,7 @@ class AndroidTVRemote:
         self._ssl_context = ssl_context
         return self._ssl_context
 
-    async def async_connect(self):
+    async def async_connect(self) -> None:
         """Connect to an Android TV.
 
         :raises CannotConnect: if couldn't connect, e.g. invalid IP address.
@@ -316,16 +316,16 @@ class AndroidTVRemote:
         # Nexus Player example:
         # dnQualifier=fugu/fugu/Nexus Player/CN=atvremote/XX:XX:XX:XX:XX:XX
         common_name = server_cert.subject.get_attributes_for_oid(x509.OID_COMMON_NAME)
-        common_name = common_name[0].value if common_name else ""
+        common_name_str = str(common_name[0].value) if common_name else ""
         dn_qualifier = server_cert.subject.get_attributes_for_oid(x509.OID_DN_QUALIFIER)
-        dn_qualifier = dn_qualifier[0].value if dn_qualifier else ""
-        common_name_parts = common_name.split("/")
-        dn_qualifier_parts = dn_qualifier.split("/")
-        name = dn_qualifier_parts[-1] if dn_qualifier else common_name_parts[-2]
+        dn_qualifier_str = str(dn_qualifier[0].value) if dn_qualifier else ""
+        common_name_parts = common_name_str.split("/")
+        dn_qualifier_parts = dn_qualifier_str.split("/")
+        name = dn_qualifier_parts[-1] if dn_qualifier_str else common_name_parts[-2]
         mac = common_name_parts[-1]
         return name, mac
 
-    async def async_start_pairing(self):
+    async def async_start_pairing(self) -> None:
         """Start the pairing process.
 
         :raises CannotConnect: if couldn't connect, e.g. invalid IP address.
@@ -356,7 +356,7 @@ class AndroidTVRemote:
             raise CannotConnect from exc
         await self._pairing_message_protocol.async_start_pairing()
 
-    async def async_finish_pairing(self, pairing_code: str):
+    async def async_finish_pairing(self, pairing_code: str) -> None:
         """Finish the pairing process.
 
         :param pairing_code: pairing code shown on the Android TV.
@@ -371,7 +371,7 @@ class AndroidTVRemote:
 
     def send_key_command(
         self, key_code: int | str, direction: int | str = RemoteDirection.SHORT
-    ):
+    ) -> None:
         """Send a key press to Android TV.
 
         This does not block; it buffers the data and arranges for it to be sent out asynchronously.
@@ -387,7 +387,7 @@ class AndroidTVRemote:
             raise ConnectionClosed("Called send_key_command after disconnect")
         self._remote_message_protocol.send_key_command(key_code, direction)
 
-    def send_launch_app_command(self, app_link: str):
+    def send_launch_app_command(self, app_link: str) -> None:
         """Launch an app on Android TV.
 
         This does not block; it buffers the data and arranges for it to be sent out asynchronously.

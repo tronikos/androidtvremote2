@@ -6,8 +6,8 @@ import asyncio
 from typing import cast
 
 from google.protobuf import text_format
-from google.protobuf.internal.decoder import _DecodeVarint
-from google.protobuf.internal.encoder import _EncodeVarint
+from google.protobuf.internal.decoder import _DecodeVarint  # type: ignore[attr-defined]
+from google.protobuf.internal.encoder import _EncodeVarint  # type: ignore[attr-defined]
 from google.protobuf.message import Message
 
 from .const import LOGGER

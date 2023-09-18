@@ -4,7 +4,7 @@ A Python library for interacting with Android TV using the Android TV Remote pro
 
 For a list of the most common commands you can send to the Android TV see: [TvKeys](https://github.com/tronikos/androidtvremote2/blob/main/TvKeys.txt).
 For a full list see [here](https://github.com/tronikos/androidtvremote2/blob/main/src/androidtvremote2/remotemessage.proto#L90).
-In addition to commands you can send URLs to open apps registered to handle them.
+In addition to commands you can send URLs to open apps registered to handle them. See [this guide](https://community.home-assistant.io/t/android-tv-remote-app-links-deep-linking-guide/567921) for how to find deep links for apps.
 
 ## Credits
 

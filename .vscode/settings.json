@@ -14,7 +14,6 @@
         "proto",
         "protobuf",
         "protoc",
-        "pydantic",
         "pynput",
         "pytest",
         "remotemessage",

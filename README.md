@@ -41,7 +41,7 @@ pre-commit install
 pre-commit run --all-files
 
 # Alternative: run formatter, lint, and type checking
-python -m pip install isort black flake8 ruff mypy pydantic
+python -m pip install isort black flake8 ruff mypy
 isort . ; black . ; flake8 . ; ruff . --fix ; mypy --install-types .
 
 # Run tests

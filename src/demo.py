@@ -93,7 +93,7 @@ async def _host_from_zeroconf(timeout: float) -> str:
     ) -> None:
         if state_change is not ServiceStateChange.Added:
             return
-        _ = asyncio.ensure_future(
+        _ = asyncio.ensure_future(  # noqa: RUF006
             async_display_service_info(zeroconf, service_type, name)
         )
 
@@ -107,12 +107,12 @@ async def _host_from_zeroconf(timeout: float) -> str:
                 "%s:%d" % (addr, cast(int, info.port))
                 for addr in info.parsed_scoped_addresses()
             ]
-            print("  Name: %s" % name)
-            print("  Addresses: %s" % ", ".join(addresses))
+            print(f"  Name: {name}")
+            print(f"  Addresses: {", ".join(addresses)}")
             if info.properties:
                 print("  Properties:")
                 for key, value in info.properties.items():
-                    print("    %s: %s", key, value)
+                    print(f"    {key!r}: {value!r}")
             else:
                 print("  No properties")
         else:

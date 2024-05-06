@@ -6,6 +6,7 @@ import asyncio
 from collections.abc import Callable
 import os
 import ssl
+from urllib.parse import urlparse
 
 import aiofiles
 from cryptography import x509
@@ -397,7 +398,7 @@ class AndroidTVRemote:
         if not self._remote_message_protocol:
             LOGGER.debug("Called send_launch_app_command after disconnect")
             raise ConnectionClosed("Called send_launch_app_command after disconnect")
-        prefix = "" if "://" in app_link_or_app_id else "market://launch?id="
+        prefix = "" if urlparse(app_link_or_app_id).scheme else "market://launch?id="
         self._remote_message_protocol.send_launch_app_command(
             f"{prefix}{app_link_or_app_id}"
         )

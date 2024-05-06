@@ -387,7 +387,7 @@ class AndroidTVRemote:
             raise ConnectionClosed("Called send_key_command after disconnect")
         self._remote_message_protocol.send_key_command(key_code, direction)
 
-    def send_launch_app_command(self, app_link: str) -> None:
+    def send_launch_app_command(self, app_link_or_app_id: str) -> None:
         """Launch an app on Android TV.
 
         This does not block; it buffers the data and arranges for it to be sent out asynchronously.
@@ -397,4 +397,7 @@ class AndroidTVRemote:
         if not self._remote_message_protocol:
             LOGGER.debug("Called send_launch_app_command after disconnect")
             raise ConnectionClosed("Called send_launch_app_command after disconnect")
-        self._remote_message_protocol.send_launch_app_command(app_link)
+        prefix = "" if "://" in app_link_or_app_id else "market://launch?id="
+        self._remote_message_protocol.send_launch_app_command(
+            f"{prefix}{app_link_or_app_id}"
+        )

@@ -34,6 +34,7 @@ async def _bind_keyboard(remote: AndroidTVRemote) -> None:
         "\n- 'n': Netflix"
         "\n- 'd': Disney+"
         "\n- 'a': Amazon Prime Video"
+        "\n- 'k': Kodi"
         "\n- 'q': quit\n\n"
     )
     key_mappings = {
@@ -77,11 +78,13 @@ async def _bind_keyboard(remote: AndroidTVRemote) -> None:
             elif key.char == "y":
                 remote.send_launch_app_command("https://www.youtube.com")
             elif key.char == "n":
-                remote.send_launch_app_command("https://www.netflix.com/title")
+                remote.send_launch_app_command("com.netflix.ninja")
             elif key.char == "d":
-                remote.send_launch_app_command("https://www.disneyplus.com")
+                remote.send_launch_app_command("com.disney.disneyplus")
             elif key.char == "a":
-                remote.send_launch_app_command("https://app.primevideo.com")
+                remote.send_launch_app_command("com.amazon.amazonvideo.livingroom")
+            elif key.char == "k":
+                remote.send_launch_app_command("org.xbmc.kodi")
 
 
 async def _host_from_zeroconf(timeout: float) -> str:

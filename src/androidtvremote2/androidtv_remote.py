@@ -181,7 +181,6 @@ class AndroidTVRemote:
         except FileNotFoundError as exc:
             LOGGER.debug("Missing certificate. Error: %s", exc)
             raise InvalidAuth from exc
-        ssl_context.load_cert_chain(self._certfile, self._keyfile)
         self._ssl_context = ssl_context
         return self._ssl_context
 

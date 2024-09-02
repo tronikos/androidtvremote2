@@ -40,7 +40,7 @@ jobs:
           flake8 . --count --exit-zero --show-source --statistics
       - name: Lint with ruff
         run: |
-          ruff .
+          ruff check .
       - name: Static typing with mypy
         run: |
           mkdir -p .mypy_cache

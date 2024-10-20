@@ -19,7 +19,7 @@ from .remotemessage_pb2 import RemoteDirection, RemoteKeyCode, RemoteMessage
 
 LOG_PING_REQUESTS = False
 ERROR_SUGGESTION_MSG = (
-    "Try clearing the storage of the Android TV Remove Service system app. "
+    "Try clearing the storage of the Android TV Remote Service system app. "
     "On the Android TV device, go to Settings > Apps > See all apps > Show system apps. "
     "Then, select Android TV Remote Service > Storage > Clear data/storage."
 )

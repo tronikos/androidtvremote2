@@ -394,6 +394,18 @@ class AndroidTVRemote:
             raise ConnectionClosed("Called send_key_command after disconnect")
         self._remote_message_protocol.send_key_command(key_code, direction)
 
+    def send_text(self, text: str) -> None:
+        """Send text to Android TV.
+
+        :param text: text to be sent.
+        :raises ConnectionClosed: if client is disconnected.
+        :may not work as expected if virtual keyboard is present on the Android TV screen
+        """
+        if not self._remote_message_protocol:
+            LOGGER.debug("Called send_text after disconnect")
+            raise ConnectionClosed("Called send_text after disconnect")
+        self._remote_message_protocol.send_text(text)
+
     def send_launch_app_command(self, app_link_or_app_id: str) -> None:
         """Launch an app on Android TV.
 

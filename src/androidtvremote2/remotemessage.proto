@@ -61,13 +61,20 @@ message RemoteImeShowRequest {
 }
 
 message RemoteEditInfo {
-  int32 insert = 2;
+  int32 insert = 1;
+  RemoteImeObject text_field_status = 2;
+}
+
+message RemoteImeObject {
+  int32 start = 1;
+  int32 end = 2;
+  string value = 3;
 }
 
 message RemoteImeBatchEdit {
   int32 ime_counter = 1;
   int32 field_counter = 2;
-  RemoteEditInfo edit_info = 3;
+  repeated RemoteEditInfo edit_info = 3;
 }
 
 message RemoteAppInfo {

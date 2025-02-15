@@ -4,8 +4,11 @@ isort:skip_file
 Copied from https://github.com/louis49/androidtv-remote/blob/main/src/remote/remotemessage.proto
 Comments on RemoteKeyCode enum added from https://android.googlesource.com/platform/frameworks/native/+/master/include/android/keycodes.h
 """
+
 import builtins
+import collections.abc
 import google.protobuf.descriptor
+import google.protobuf.internal.containers
 import google.protobuf.internal.enum_type_wrapper
 import google.protobuf.message
 import sys
@@ -1760,7 +1763,7 @@ END_LONG: RemoteDirection.ValueType  # 2
 SHORT: RemoteDirection.ValueType  # 3
 global___RemoteDirection = RemoteDirection
 
-@typing_extensions.final
+@typing.final
 class RemoteAppLinkLaunchRequest(google.protobuf.message.Message):
     DESCRIPTOR: google.protobuf.descriptor.Descriptor
 
@@ -1771,11 +1774,11 @@ class RemoteAppLinkLaunchRequest(google.protobuf.message.Message):
         *,
         app_link: builtins.str = ...,
     ) -> None: ...
-    def ClearField(self, field_name: typing_extensions.Literal["app_link", b"app_link"]) -> None: ...
+    def ClearField(self, field_name: typing.Literal["app_link", b"app_link"]) -> None: ...
 
 global___RemoteAppLinkLaunchRequest = RemoteAppLinkLaunchRequest
 
-@typing_extensions.final
+@typing.final
 class RemoteResetPreferredAudioDevice(google.protobuf.message.Message):
     DESCRIPTOR: google.protobuf.descriptor.Descriptor
 
@@ -1785,7 +1788,7 @@ class RemoteResetPreferredAudioDevice(google.protobuf.message.Message):
 
 global___RemoteResetPreferredAudioDevice = RemoteResetPreferredAudioDevice
 
-@typing_extensions.final
+@typing.final
 class RemoteSetPreferredAudioDevice(google.protobuf.message.Message):
     DESCRIPTOR: google.protobuf.descriptor.Descriptor
 
@@ -1795,7 +1798,7 @@ class RemoteSetPreferredAudioDevice(google.protobuf.message.Message):
 
 global___RemoteSetPreferredAudioDevice = RemoteSetPreferredAudioDevice
 
-@typing_extensions.final
+@typing.final
 class RemoteAdjustVolumeLevel(google.protobuf.message.Message):
     DESCRIPTOR: google.protobuf.descriptor.Descriptor
 
@@ -1805,7 +1808,7 @@ class RemoteAdjustVolumeLevel(google.protobuf.message.Message):
 
 global___RemoteAdjustVolumeLevel = RemoteAdjustVolumeLevel
 
-@typing_extensions.final
+@typing.final
 class RemoteSetVolumeLevel(google.protobuf.message.Message):
     DESCRIPTOR: google.protobuf.descriptor.Descriptor
 
@@ -1837,11 +1840,11 @@ class RemoteSetVolumeLevel(google.protobuf.message.Message):
         volume_level: builtins.int = ...,
         volume_muted: builtins.bool = ...,
     ) -> None: ...
-    def ClearField(self, field_name: typing_extensions.Literal["player_model", b"player_model", "unknown1", b"unknown1", "unknown2", b"unknown2", "unknown4", b"unknown4", "unknown5", b"unknown5", "volume_level", b"volume_level", "volume_max", b"volume_max", "volume_muted", b"volume_muted"]) -> None: ...
+    def ClearField(self, field_name: typing.Literal["player_model", b"player_model", "unknown1", b"unknown1", "unknown2", b"unknown2", "unknown4", b"unknown4", "unknown5", b"unknown5", "volume_level", b"volume_level", "volume_max", b"volume_max", "volume_muted", b"volume_muted"]) -> None: ...
 
 global___RemoteSetVolumeLevel = RemoteSetVolumeLevel
 
-@typing_extensions.final
+@typing.final
 class RemoteStart(google.protobuf.message.Message):
     DESCRIPTOR: google.protobuf.descriptor.Descriptor
 
@@ -1852,11 +1855,11 @@ class RemoteStart(google.protobuf.message.Message):
         *,
         started: builtins.bool = ...,
     ) -> None: ...
-    def ClearField(self, field_name: typing_extensions.Literal["started", b"started"]) -> None: ...
+    def ClearField(self, field_name: typing.Literal["started", b"started"]) -> None: ...
 
 global___RemoteStart = RemoteStart
 
-@typing_extensions.final
+@typing.final
 class RemoteVoiceEnd(google.protobuf.message.Message):
     DESCRIPTOR: google.protobuf.descriptor.Descriptor
 
@@ -1866,7 +1869,7 @@ class RemoteVoiceEnd(google.protobuf.message.Message):
 
 global___RemoteVoiceEnd = RemoteVoiceEnd
 
-@typing_extensions.final
+@typing.final
 class RemoteVoicePayload(google.protobuf.message.Message):
     DESCRIPTOR: google.protobuf.descriptor.Descriptor
 
@@ -1876,7 +1879,7 @@ class RemoteVoicePayload(google.protobuf.message.Message):
 
 global___RemoteVoicePayload = RemoteVoicePayload
 
-@typing_extensions.final
+@typing.final
 class RemoteVoiceBegin(google.protobuf.message.Message):
     DESCRIPTOR: google.protobuf.descriptor.Descriptor
 
@@ -1886,7 +1889,7 @@ class RemoteVoiceBegin(google.protobuf.message.Message):
 
 global___RemoteVoiceBegin = RemoteVoiceBegin
 
-@typing_extensions.final
+@typing.final
 class RemoteTextFieldStatus(google.protobuf.message.Message):
     DESCRIPTOR: google.protobuf.descriptor.Descriptor
 
@@ -1912,11 +1915,11 @@ class RemoteTextFieldStatus(google.protobuf.message.Message):
         int5: builtins.int = ...,
         label: builtins.str = ...,
     ) -> None: ...
-    def ClearField(self, field_name: typing_extensions.Literal["counter_field", b"counter_field", "end", b"end", "int5", b"int5", "label", b"label", "start", b"start", "value", b"value"]) -> None: ...
+    def ClearField(self, field_name: typing.Literal["counter_field", b"counter_field", "end", b"end", "int5", b"int5", "label", b"label", "start", b"start", "value", b"value"]) -> None: ...
 
 global___RemoteTextFieldStatus = RemoteTextFieldStatus
 
-@typing_extensions.final
+@typing.final
 class RemoteImeShowRequest(google.protobuf.message.Message):
     DESCRIPTOR: google.protobuf.descriptor.Descriptor
 
@@ -1928,27 +1931,53 @@ class RemoteImeShowRequest(google.protobuf.message.Message):
         *,
         remote_text_field_status: global___RemoteTextFieldStatus | None = ...,
     ) -> None: ...
-    def HasField(self, field_name: typing_extensions.Literal["remote_text_field_status", b"remote_text_field_status"]) -> builtins.bool: ...
-    def ClearField(self, field_name: typing_extensions.Literal["remote_text_field_status", b"remote_text_field_status"]) -> None: ...
+    def HasField(self, field_name: typing.Literal["remote_text_field_status", b"remote_text_field_status"]) -> builtins.bool: ...
+    def ClearField(self, field_name: typing.Literal["remote_text_field_status", b"remote_text_field_status"]) -> None: ...
 
 global___RemoteImeShowRequest = RemoteImeShowRequest
 
-@typing_extensions.final
+@typing.final
 class RemoteEditInfo(google.protobuf.message.Message):
     DESCRIPTOR: google.protobuf.descriptor.Descriptor
 
     INSERT_FIELD_NUMBER: builtins.int
+    TEXT_FIELD_STATUS_FIELD_NUMBER: builtins.int
     insert: builtins.int
+    @property
+    def text_field_status(self) -> global___RemoteImeObject: ...
     def __init__(
         self,
         *,
         insert: builtins.int = ...,
+        text_field_status: global___RemoteImeObject | None = ...,
     ) -> None: ...
-    def ClearField(self, field_name: typing_extensions.Literal["insert", b"insert"]) -> None: ...
+    def HasField(self, field_name: typing.Literal["text_field_status", b"text_field_status"]) -> builtins.bool: ...
+    def ClearField(self, field_name: typing.Literal["insert", b"insert", "text_field_status", b"text_field_status"]) -> None: ...
 
 global___RemoteEditInfo = RemoteEditInfo
 
-@typing_extensions.final
+@typing.final
+class RemoteImeObject(google.protobuf.message.Message):
+    DESCRIPTOR: google.protobuf.descriptor.Descriptor
+
+    START_FIELD_NUMBER: builtins.int
+    END_FIELD_NUMBER: builtins.int
+    VALUE_FIELD_NUMBER: builtins.int
+    start: builtins.int
+    end: builtins.int
+    value: builtins.str
+    def __init__(
+        self,
+        *,
+        start: builtins.int = ...,
+        end: builtins.int = ...,
+        value: builtins.str = ...,
+    ) -> None: ...
+    def ClearField(self, field_name: typing.Literal["end", b"end", "start", b"start", "value", b"value"]) -> None: ...
+
+global___RemoteImeObject = RemoteImeObject
+
+@typing.final
 class RemoteImeBatchEdit(google.protobuf.message.Message):
     DESCRIPTOR: google.protobuf.descriptor.Descriptor
 
@@ -1958,20 +1987,19 @@ class RemoteImeBatchEdit(google.protobuf.message.Message):
     ime_counter: builtins.int
     field_counter: builtins.int
     @property
-    def edit_info(self) -> global___RemoteEditInfo: ...
+    def edit_info(self) -> google.protobuf.internal.containers.RepeatedCompositeFieldContainer[global___RemoteEditInfo]: ...
     def __init__(
         self,
         *,
         ime_counter: builtins.int = ...,
         field_counter: builtins.int = ...,
-        edit_info: global___RemoteEditInfo | None = ...,
+        edit_info: collections.abc.Iterable[global___RemoteEditInfo] | None = ...,
     ) -> None: ...
-    def HasField(self, field_name: typing_extensions.Literal["edit_info", b"edit_info"]) -> builtins.bool: ...
-    def ClearField(self, field_name: typing_extensions.Literal["edit_info", b"edit_info", "field_counter", b"field_counter", "ime_counter", b"ime_counter"]) -> None: ...
+    def ClearField(self, field_name: typing.Literal["edit_info", b"edit_info", "field_counter", b"field_counter", "ime_counter", b"ime_counter"]) -> None: ...
 
 global___RemoteImeBatchEdit = RemoteImeBatchEdit
 
-@typing_extensions.final
+@typing.final
 class RemoteAppInfo(google.protobuf.message.Message):
     DESCRIPTOR: google.protobuf.descriptor.Descriptor
 
@@ -2006,11 +2034,11 @@ class RemoteAppInfo(google.protobuf.message.Message):
         app_package: builtins.str = ...,
         int13: builtins.int = ...,
     ) -> None: ...
-    def ClearField(self, field_name: typing_extensions.Literal["app_package", b"app_package", "counter", b"counter", "int13", b"int13", "int2", b"int2", "int3", b"int3", "int4", b"int4", "int7", b"int7", "int8", b"int8", "label", b"label"]) -> None: ...
+    def ClearField(self, field_name: typing.Literal["app_package", b"app_package", "counter", b"counter", "int13", b"int13", "int2", b"int2", "int3", b"int3", "int4", b"int4", "int7", b"int7", "int8", b"int8", "label", b"label"]) -> None: ...
 
 global___RemoteAppInfo = RemoteAppInfo
 
-@typing_extensions.final
+@typing.final
 class RemoteImeKeyInject(google.protobuf.message.Message):
     DESCRIPTOR: google.protobuf.descriptor.Descriptor
 
@@ -2026,12 +2054,12 @@ class RemoteImeKeyInject(google.protobuf.message.Message):
         app_info: global___RemoteAppInfo | None = ...,
         text_field_status: global___RemoteTextFieldStatus | None = ...,
     ) -> None: ...
-    def HasField(self, field_name: typing_extensions.Literal["app_info", b"app_info", "text_field_status", b"text_field_status"]) -> builtins.bool: ...
-    def ClearField(self, field_name: typing_extensions.Literal["app_info", b"app_info", "text_field_status", b"text_field_status"]) -> None: ...
+    def HasField(self, field_name: typing.Literal["app_info", b"app_info", "text_field_status", b"text_field_status"]) -> builtins.bool: ...
+    def ClearField(self, field_name: typing.Literal["app_info", b"app_info", "text_field_status", b"text_field_status"]) -> None: ...
 
 global___RemoteImeKeyInject = RemoteImeKeyInject
 
-@typing_extensions.final
+@typing.final
 class RemoteKeyInject(google.protobuf.message.Message):
     DESCRIPTOR: google.protobuf.descriptor.Descriptor
 
@@ -2045,11 +2073,11 @@ class RemoteKeyInject(google.protobuf.message.Message):
         key_code: global___RemoteKeyCode.ValueType = ...,
         direction: global___RemoteDirection.ValueType = ...,
     ) -> None: ...
-    def ClearField(self, field_name: typing_extensions.Literal["direction", b"direction", "key_code", b"key_code"]) -> None: ...
+    def ClearField(self, field_name: typing.Literal["direction", b"direction", "key_code", b"key_code"]) -> None: ...
 
 global___RemoteKeyInject = RemoteKeyInject
 
-@typing_extensions.final
+@typing.final
 class RemotePingResponse(google.protobuf.message.Message):
     DESCRIPTOR: google.protobuf.descriptor.Descriptor
 
@@ -2060,11 +2088,11 @@ class RemotePingResponse(google.protobuf.message.Message):
         *,
         val1: builtins.int = ...,
     ) -> None: ...
-    def ClearField(self, field_name: typing_extensions.Literal["val1", b"val1"]) -> None: ...
+    def ClearField(self, field_name: typing.Literal["val1", b"val1"]) -> None: ...
 
 global___RemotePingResponse = RemotePingResponse
 
-@typing_extensions.final
+@typing.final
 class RemotePingRequest(google.protobuf.message.Message):
     DESCRIPTOR: google.protobuf.descriptor.Descriptor
 
@@ -2078,11 +2106,11 @@ class RemotePingRequest(google.protobuf.message.Message):
         val1: builtins.int = ...,
         val2: builtins.int = ...,
     ) -> None: ...
-    def ClearField(self, field_name: typing_extensions.Literal["val1", b"val1", "val2", b"val2"]) -> None: ...
+    def ClearField(self, field_name: typing.Literal["val1", b"val1", "val2", b"val2"]) -> None: ...
 
 global___RemotePingRequest = RemotePingRequest
 
-@typing_extensions.final
+@typing.final
 class RemoteSetActive(google.protobuf.message.Message):
     DESCRIPTOR: google.protobuf.descriptor.Descriptor
 
@@ -2093,11 +2121,11 @@ class RemoteSetActive(google.protobuf.message.Message):
         *,
         active: builtins.int = ...,
     ) -> None: ...
-    def ClearField(self, field_name: typing_extensions.Literal["active", b"active"]) -> None: ...
+    def ClearField(self, field_name: typing.Literal["active", b"active"]) -> None: ...
 
 global___RemoteSetActive = RemoteSetActive
 
-@typing_extensions.final
+@typing.final
 class RemoteDeviceInfo(google.protobuf.message.Message):
     DESCRIPTOR: google.protobuf.descriptor.Descriptor
 
@@ -2123,11 +2151,11 @@ class RemoteDeviceInfo(google.protobuf.message.Message):
         package_name: builtins.str = ...,
         app_version: builtins.str = ...,
     ) -> None: ...
-    def ClearField(self, field_name: typing_extensions.Literal["app_version", b"app_version", "model", b"model", "package_name", b"package_name", "unknown1", b"unknown1", "unknown2", b"unknown2", "vendor", b"vendor"]) -> None: ...
+    def ClearField(self, field_name: typing.Literal["app_version", b"app_version", "model", b"model", "package_name", b"package_name", "unknown1", b"unknown1", "unknown2", b"unknown2", "vendor", b"vendor"]) -> None: ...
 
 global___RemoteDeviceInfo = RemoteDeviceInfo
 
-@typing_extensions.final
+@typing.final
 class RemoteConfigure(google.protobuf.message.Message):
     DESCRIPTOR: google.protobuf.descriptor.Descriptor
 
@@ -2142,12 +2170,12 @@ class RemoteConfigure(google.protobuf.message.Message):
         code1: builtins.int = ...,
         device_info: global___RemoteDeviceInfo | None = ...,
     ) -> None: ...
-    def HasField(self, field_name: typing_extensions.Literal["device_info", b"device_info"]) -> builtins.bool: ...
-    def ClearField(self, field_name: typing_extensions.Literal["code1", b"code1", "device_info", b"device_info"]) -> None: ...
+    def HasField(self, field_name: typing.Literal["device_info", b"device_info"]) -> builtins.bool: ...
+    def ClearField(self, field_name: typing.Literal["code1", b"code1", "device_info", b"device_info"]) -> None: ...
 
 global___RemoteConfigure = RemoteConfigure
 
-@typing_extensions.final
+@typing.final
 class RemoteError(google.protobuf.message.Message):
     DESCRIPTOR: google.protobuf.descriptor.Descriptor
 
@@ -2162,12 +2190,12 @@ class RemoteError(google.protobuf.message.Message):
         value: builtins.bool = ...,
         message: global___RemoteMessage | None = ...,
     ) -> None: ...
-    def HasField(self, field_name: typing_extensions.Literal["message", b"message"]) -> builtins.bool: ...
-    def ClearField(self, field_name: typing_extensions.Literal["message", b"message", "value", b"value"]) -> None: ...
+    def HasField(self, field_name: typing.Literal["message", b"message"]) -> builtins.bool: ...
+    def ClearField(self, field_name: typing.Literal["message", b"message", "value", b"value"]) -> None: ...
 
 global___RemoteError = RemoteError
 
-@typing_extensions.final
+@typing.final
 class RemoteMessage(google.protobuf.message.Message):
     DESCRIPTOR: google.protobuf.descriptor.Descriptor
 
@@ -2247,7 +2275,7 @@ class RemoteMessage(google.protobuf.message.Message):
         remote_reset_preferred_audio_device: global___RemoteResetPreferredAudioDevice | None = ...,
         remote_app_link_launch_request: global___RemoteAppLinkLaunchRequest | None = ...,
     ) -> None: ...
-    def HasField(self, field_name: typing_extensions.Literal["remote_adjust_volume_level", b"remote_adjust_volume_level", "remote_app_link_launch_request", b"remote_app_link_launch_request", "remote_configure", b"remote_configure", "remote_error", b"remote_error", "remote_ime_batch_edit", b"remote_ime_batch_edit", "remote_ime_key_inject", b"remote_ime_key_inject", "remote_ime_show_request", b"remote_ime_show_request", "remote_key_inject", b"remote_key_inject", "remote_ping_request", b"remote_ping_request", "remote_ping_response", b"remote_ping_response", "remote_reset_preferred_audio_device", b"remote_reset_preferred_audio_device", "remote_set_active", b"remote_set_active", "remote_set_preferred_audio_device", b"remote_set_preferred_audio_device", "remote_set_volume_level", b"remote_set_volume_level", "remote_start", b"remote_start", "remote_voice_begin", b"remote_voice_begin", "remote_voice_end", b"remote_voice_end", "remote_voice_payload", b"remote_voice_payload"]) -> builtins.bool: ...
-    def ClearField(self, field_name: typing_extensions.Literal["remote_adjust_volume_level", b"remote_adjust_volume_level", "remote_app_link_launch_request", b"remote_app_link_launch_request", "remote_configure", b"remote_configure", "remote_error", b"remote_error", "remote_ime_batch_edit", b"remote_ime_batch_edit", "remote_ime_key_inject", b"remote_ime_key_inject", "remote_ime_show_request", b"remote_ime_show_request", "remote_key_inject", b"remote_key_inject", "remote_ping_request", b"remote_ping_request", "remote_ping_response", b"remote_ping_response", "remote_reset_preferred_audio_device", b"remote_reset_preferred_audio_device", "remote_set_active", b"remote_set_active", "remote_set_preferred_audio_device", b"remote_set_preferred_audio_device", "remote_set_volume_level", b"remote_set_volume_level", "remote_start", b"remote_start", "remote_voice_begin", b"remote_voice_begin", "remote_voice_end", b"remote_voice_end", "remote_voice_payload", b"remote_voice_payload"]) -> None: ...
+    def HasField(self, field_name: typing.Literal["remote_adjust_volume_level", b"remote_adjust_volume_level", "remote_app_link_launch_request", b"remote_app_link_launch_request", "remote_configure", b"remote_configure", "remote_error", b"remote_error", "remote_ime_batch_edit", b"remote_ime_batch_edit", "remote_ime_key_inject", b"remote_ime_key_inject", "remote_ime_show_request", b"remote_ime_show_request", "remote_key_inject", b"remote_key_inject", "remote_ping_request", b"remote_ping_request", "remote_ping_response", b"remote_ping_response", "remote_reset_preferred_audio_device", b"remote_reset_preferred_audio_device", "remote_set_active", b"remote_set_active", "remote_set_preferred_audio_device", b"remote_set_preferred_audio_device", "remote_set_volume_level", b"remote_set_volume_level", "remote_start", b"remote_start", "remote_voice_begin", b"remote_voice_begin", "remote_voice_end", b"remote_voice_end", "remote_voice_payload", b"remote_voice_payload"]) -> builtins.bool: ...
+    def ClearField(self, field_name: typing.Literal["remote_adjust_volume_level", b"remote_adjust_volume_level", "remote_app_link_launch_request", b"remote_app_link_launch_request", "remote_configure", b"remote_configure", "remote_error", b"remote_error", "remote_ime_batch_edit", b"remote_ime_batch_edit", "remote_ime_key_inject", b"remote_ime_key_inject", "remote_ime_show_request", b"remote_ime_show_request", "remote_key_inject", b"remote_key_inject", "remote_ping_request", b"remote_ping_request", "remote_ping_response", b"remote_ping_response", "remote_reset_preferred_audio_device", b"remote_reset_preferred_audio_device", "remote_set_active", b"remote_set_active", "remote_set_preferred_audio_device", b"remote_set_preferred_audio_device", "remote_set_volume_level", b"remote_set_volume_level", "remote_start", b"remote_start", "remote_voice_begin", b"remote_voice_begin", "remote_voice_end", b"remote_voice_end", "remote_voice_payload", b"remote_voice_payload"]) -> None: ...
 
 global___RemoteMessage = RemoteMessage

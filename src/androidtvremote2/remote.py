@@ -15,7 +15,14 @@ from google.protobuf.message import DecodeError
 
 from .base import ProtobufProtocol
 from .const import LOGGER
-from .remotemessage_pb2 import RemoteDirection, RemoteKeyCode, RemoteMessage
+from .remotemessage_pb2 import (
+    RemoteDirection,
+    RemoteEditInfo,
+    RemoteImeBatchEdit,
+    RemoteImeObject,
+    RemoteKeyCode,
+    RemoteMessage,
+)
 
 LOG_PING_REQUESTS = False
 ERROR_SUGGESTION_MSG = (
@@ -82,6 +89,8 @@ class RemoteProtocol(ProtobufProtocol):
         self.current_app = ""
         self.device_info: dict[str, str] = {}
         self.volume_info: dict[str, str | bool | int] = {}
+        self.ime_counter: int = 0
+        self.ime_field_counter: int = 0
         self._loop = loop
         self._idle_disconnect_task: asyncio.Task | None = None
         self._reset_idle_disconnect_task()
@@ -108,6 +117,31 @@ class RemoteProtocol(ProtobufProtocol):
             direction = RemoteDirection.Value(direction)
         msg.remote_key_inject.key_code = key_code  # type: ignore[assignment]
         msg.remote_key_inject.direction = direction  # type: ignore[assignment]
+        self._send_message(msg)
+
+    def send_text(self, text: str) -> None:
+        """Send a text string to Android TV via the input method.
+
+        The text length is used for both `start` and `end` in the RemoteImeObject.
+        The `ime_counter` and `ime_field_counter` values are taken from self (batch_edit_info response),
+        which is populated when a message with a remote_ime_batch_edit field is received.
+
+        :param text: The text string to be sent.
+        """
+        if not text:
+            raise ValueError("Text cannot be empty")
+
+        self._reset_idle_disconnect_task()
+        msg = RemoteMessage()
+        param_value = len(text) - 1
+        ime_object = RemoteImeObject(start=param_value, end=param_value, value=text)
+        edit_info = RemoteEditInfo(insert=1, text_field_status=ime_object)
+        batch_edit = RemoteImeBatchEdit(
+            ime_counter=self.ime_counter,
+            field_counter=self.ime_field_counter,
+            edit_info=[edit_info],
+        )
+        msg.remote_ime_batch_edit.CopyFrom(batch_edit)
         self._send_message(msg)
 
     def send_launch_app_command(self, app_link: str) -> None:
@@ -165,6 +199,9 @@ class RemoteProtocol(ProtobufProtocol):
         elif msg.HasField("remote_ime_key_inject"):
             self.current_app = msg.remote_ime_key_inject.app_info.app_package
             self._on_current_app_updated(self.current_app)
+        elif msg.HasField("remote_ime_batch_edit"):
+            self.ime_counter = msg.remote_ime_batch_edit.ime_counter
+            self.ime_field_counter = msg.remote_ime_batch_edit.field_counter
         elif msg.HasField("remote_set_volume_level"):
             self.volume_info = {
                 "level": msg.remote_set_volume_level.volume_level,

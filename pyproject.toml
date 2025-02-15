@@ -1,6 +1,6 @@
 [project]
 name = "androidtvremote2"
-version = "0.1.2"
+version = "0.2.0"
 license = {text = "Apache-2.0"}
 authors = [
     { name="tronikos", email="tronikos@gmail.com" },

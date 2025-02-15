@@ -35,7 +35,8 @@ async def _bind_keyboard(remote: AndroidTVRemote) -> None:
         "\n- 'd': Disney+"
         "\n- 'a': Amazon Prime Video"
         "\n- 'k': Kodi"
-        "\n- 'q': quit\n\n"
+        "\n- 'q': quit"
+        "\n- 't': send text 'Hello world' to Android TV\n\n"
     )
     key_mappings = {
         keyboard.Key.up: "DPAD_UP",
@@ -85,6 +86,8 @@ async def _bind_keyboard(remote: AndroidTVRemote) -> None:
                 remote.send_launch_app_command("com.amazon.amazonvideo.livingroom")
             elif key.char == "k":
                 remote.send_launch_app_command("org.xbmc.kodi")
+            elif key.char == "t":
+                remote.send_text("Hello World!")
 
 
 async def _host_from_zeroconf(timeout: float) -> str:

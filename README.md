@@ -42,7 +42,7 @@ pre-commit run --all-files
 
 # Alternative: run formatter, lint, and type checking
 python -m pip install isort black flake8 ruff mypy
-isort . ; black . ; flake8 . ; ruff . --fix ; mypy --install-types .
+isort . ; black . ; flake8 . ; ruff check . --fix ; mypy --install-types .
 
 # Run tests
 python -m pip install pytest

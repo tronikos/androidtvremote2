@@ -36,6 +36,7 @@ target-version = "py311"
 exclude = ["*_pb2.py", "*_pb2_grpc.py", "*.pyi"]
 line-length = 127
 
+[tool.ruff.lint]
 select = [
     "B007", # Loop control variable {name} not used within loop body
     "B014", # Exception handler with duplicate exception
@@ -68,12 +69,12 @@ ignore = [
     'UP007', # Non PEP604 annotations
 ]
 
-[tool.ruff.flake8-pytest-style]
+[tool.ruff.lint.flake8-pytest-style]
 fixture-parentheses = false
 
-[tool.ruff.per-file-ignores]
+[tool.ruff.lint.per-file-ignores]
 # Allow for demo script to write to stdout
 "demo.py" = ["T201"]
 
-[tool.ruff.mccabe]
+[tool.ruff.lint.mccabe]
 max-complexity = 25

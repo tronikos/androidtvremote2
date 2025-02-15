@@ -107,7 +107,7 @@ async def _host_from_zeroconf(timeout: float) -> str:
         await info.async_request(zeroconf, 3000)
         if info:
             addresses = [
-                "%s:%d" % (addr, cast(int, info.port))
+                f"{addr}:{cast(int, info.port)}"
                 for addr in info.parsed_scoped_addresses()
             ]
             print(f"  Name: {name}")

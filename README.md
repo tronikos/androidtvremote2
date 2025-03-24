@@ -37,6 +37,7 @@ python -m grpc_tools.protoc src/androidtvremote2/*.proto --python_out=src/androi
 
 # Run pre-commit
 python -m pip install pre-commit
+pre-commit autoupdate
 pre-commit install
 pre-commit run --all-files
 

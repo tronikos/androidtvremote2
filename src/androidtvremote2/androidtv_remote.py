@@ -384,7 +384,8 @@ class AndroidTVRemote:
         This does not block; it buffers the data and arranges for it to be sent out asynchronously.
 
         :param key_code: int (e.g. 26) or str (e.g. "KEYCODE_POWER" or just "POWER") from the enum
-                         RemoteKeyCode in remotemessage.proto.
+                         RemoteKeyCode in remotemessage.proto or str prefixed with "text:" to pass
+                         to send_text.
         :param direction: "SHORT" (default) or "START_LONG" or "END_LONG".
         :raises ValueError: if key_code in str or direction isn't known.
         :raises ConnectionClosed: if client is disconnected.

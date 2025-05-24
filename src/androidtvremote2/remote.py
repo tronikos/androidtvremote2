@@ -30,6 +30,8 @@ ERROR_SUGGESTION_MSG = (
     "On the Android TV device, go to Settings > Apps > See all apps > Show system apps. "
     "Then, select Android TV Remote Service > Storage > Clear data/storage."
 )
+KEYCODE_PREFIX = "KEYCODE_"
+TEXT_PREFIX = "text:"
 
 
 class Feature(IntFlag):
@@ -102,16 +104,19 @@ class RemoteProtocol(ProtobufProtocol):
 
         This does not block; it buffers the data and arranges for it to be sent out asynchronously.
 
-        :param key_code: int (e.g. 26) or str (e.g. KEYCODE_POWER or just "POWER") from the enum
-                         RemoteKeyCode in remotemessage.proto.
+        :param key_code: int (e.g. 26) or str (e.g. "KEYCODE_POWER" or just "POWER") from the enum
+                         RemoteKeyCode in remotemessage.proto or str prefixed with "text:" to pass
+                         to send_text.
         :param direction: "SHORT" (default) or "START_LONG" or "END_LONG".
         :raises ValueError: if key_code in str or direction isn't known.
         """
         self._reset_idle_disconnect_task()
         msg = RemoteMessage()
         if isinstance(key_code, str):
-            if not key_code.startswith("KEYCODE_"):
-                key_code = "KEYCODE_" + key_code
+            if key_code.lower().startswith(TEXT_PREFIX):
+                return self.send_text(key_code[len(TEXT_PREFIX):])
+            if not key_code.startswith(KEYCODE_PREFIX):
+                key_code = KEYCODE_PREFIX + key_code
             key_code = RemoteKeyCode.Value(key_code)
         if isinstance(direction, str):
             direction = RemoteDirection.Value(direction)

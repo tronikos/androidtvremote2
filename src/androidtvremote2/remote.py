@@ -15,6 +15,7 @@ from google.protobuf.message import DecodeError
 
 from .base import ProtobufProtocol
 from .const import LOGGER
+from .model import DeviceInfo, VolumeInfo
 from .remotemessage_pb2 import (
     RemoteDirection,
     RemoteEditInfo,
@@ -55,11 +56,11 @@ class RemoteProtocol(ProtobufProtocol):
 
     def __init__(
         self,
-        on_con_lost: asyncio.Future,
-        on_remote_started: asyncio.Future,
-        on_is_on_updated: Callable,
-        on_current_app_updated: Callable,
-        on_volume_info_updated: Callable,
+        on_con_lost: asyncio.Future[Exception | None],
+        on_remote_started: asyncio.Future[bool],
+        on_is_on_updated: Callable[[bool], None],
+        on_current_app_updated: Callable[[str], None],
+        on_volume_info_updated: Callable[[VolumeInfo], None],
         loop: asyncio.AbstractEventLoop,
         enable_ime: bool,
     ) -> None:
@@ -89,12 +90,12 @@ class RemoteProtocol(ProtobufProtocol):
         )
         self.is_on = False
         self.current_app = ""
-        self.device_info: dict[str, str] = {}
-        self.volume_info: dict[str, str | bool | int] = {}
+        self.device_info: DeviceInfo | None = None
+        self.volume_info: VolumeInfo | None = None
         self.ime_counter: int = 0
         self.ime_field_counter: int = 0
         self._loop = loop
-        self._idle_disconnect_task: asyncio.Task | None = None
+        self._idle_disconnect_task: asyncio.Task[None] | None = None
         self._reset_idle_disconnect_task()
 
     def send_key_command(
@@ -114,7 +115,7 @@ class RemoteProtocol(ProtobufProtocol):
         msg = RemoteMessage()
         if isinstance(key_code, str):
             if key_code.lower().startswith(TEXT_PREFIX):
-                return self.send_text(key_code[len(TEXT_PREFIX):])
+                return self.send_text(key_code[len(TEXT_PREFIX) :])
             if not key_code.startswith(KEYCODE_PREFIX):
                 key_code = KEYCODE_PREFIX + key_code
             key_code = RemoteKeyCode.Value(key_code)

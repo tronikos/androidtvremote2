@@ -1,6 +1,6 @@
 [project]
 name = "androidtvremote2"
-version = "0.2.2"
+version = "0.2.3"
 license = {text = "Apache-2.0"}
 authors = [
     { name="tronikos", email="tronikos@gmail.com" },
@@ -32,12 +32,11 @@ combine_as_imports = true
 extend_skip_glob = ["*_pb2.py", "*_pb2_grpc.py"]
 
 [tool.ruff]
-target-version = "py311"
+target-version = "py310"
 exclude = ["*_pb2.py", "*_pb2_grpc.py", "*.pyi"]
 line-length = 127
 
-[tool.ruff.lint]
-select = [
+lint.select = [
     "B007", # Loop control variable {name} not used within loop body
     "B014", # Exception handler with duplicate exception
     "C",  # complexity
@@ -61,7 +60,7 @@ select = [
     "W",  # pycodestyle
 ]
 
-ignore = [
+lint.ignore = [
     "D203",  # 1 blank line required before class docstring
     "D213",  # Multi-line docstring summary should start at the second line
     # keep-runtime-annotations

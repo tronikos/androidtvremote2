@@ -14,6 +14,7 @@ from androidtvremote2 import (
     CannotConnect,
     ConnectionClosed,
     InvalidAuth,
+    VolumeInfo,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -51,8 +52,8 @@ async def _bind_keyboard(remote: AndroidTVRemote) -> None:
         keyboard.Key.delete: "POWER",
     }
 
-    def transmit_keys() -> asyncio.Queue:
-        queue: asyncio.Queue = asyncio.Queue()
+    def transmit_keys() -> asyncio.Queue[keyboard.Key | keyboard.KeyCode | None]:
+        queue: asyncio.Queue[keyboard.Key | keyboard.KeyCode | None] = asyncio.Queue()
         loop = asyncio.get_event_loop()
 
         def on_press(key: keyboard.Key | keyboard.KeyCode | None) -> None:
@@ -64,30 +65,33 @@ async def _bind_keyboard(remote: AndroidTVRemote) -> None:
     key_queue = transmit_keys()
     while True:
         key = await key_queue.get()
+        if key is None:
+            continue
         if key in key_mappings:
             remote.send_key_command(key_mappings[key])
-        if hasattr(key, "char"):
-            if key.char == "q":
-                remote.disconnect()
-                return
-            elif key.char == "m":
-                remote.send_key_command("MUTE")
-            elif key.char == "+":
-                remote.send_key_command("VOLUME_UP")
-            elif key.char == "-":
-                remote.send_key_command("VOLUME_DOWN")
-            elif key.char == "y":
-                remote.send_launch_app_command("https://www.youtube.com")
-            elif key.char == "n":
-                remote.send_launch_app_command("com.netflix.ninja")
-            elif key.char == "d":
-                remote.send_launch_app_command("com.disney.disneyplus")
-            elif key.char == "a":
-                remote.send_launch_app_command("com.amazon.amazonvideo.livingroom")
-            elif key.char == "k":
-                remote.send_launch_app_command("org.xbmc.kodi")
-            elif key.char == "t":
-                remote.send_text("Hello World!")
+        if not isinstance(key, keyboard.KeyCode):
+            continue
+        if key.char == "q":
+            remote.disconnect()
+            return
+        elif key.char == "m":
+            remote.send_key_command("MUTE")
+        elif key.char == "+":
+            remote.send_key_command("VOLUME_UP")
+        elif key.char == "-":
+            remote.send_key_command("VOLUME_DOWN")
+        elif key.char == "y":
+            remote.send_launch_app_command("https://www.youtube.com")
+        elif key.char == "n":
+            remote.send_launch_app_command("com.netflix.ninja")
+        elif key.char == "d":
+            remote.send_launch_app_command("com.disney.disneyplus")
+        elif key.char == "a":
+            remote.send_launch_app_command("com.amazon.amazonvideo.livingroom")
+        elif key.char == "k":
+            remote.send_launch_app_command("org.xbmc.kodi")
+        elif key.char == "t":
+            remote.send_text("Hello World!")
 
 
 async def _host_from_zeroconf(timeout: float) -> str:
@@ -114,7 +118,7 @@ async def _host_from_zeroconf(timeout: float) -> str:
                 for addr in info.parsed_scoped_addresses()
             ]
             print(f"  Name: {name}")
-            print(f"  Addresses: {", ".join(addresses)}")
+            print(f"  Addresses: {', '.join(addresses)}")
             if info.properties:
                 print("  Properties:")
                 for key, value in info.properties.items():
@@ -227,7 +231,7 @@ async def _main() -> None:
     def current_app_updated(current_app: str) -> None:
         _LOGGER.info("Notified that current_app: %s", current_app)
 
-    def volume_info_updated(volume_info: dict[str, str | bool]) -> None:
+    def volume_info_updated(volume_info: VolumeInfo) -> None:
         _LOGGER.info("Notified that volume_info: %s", volume_info)
 
     def is_available_updated(is_available: bool) -> None:

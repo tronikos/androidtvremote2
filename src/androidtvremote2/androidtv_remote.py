@@ -14,6 +14,7 @@ from cryptography import x509
 from .certificate_generator import generate_selfsigned_cert
 from .const import LOGGER
 from .exceptions import CannotConnect, ConnectionClosed, InvalidAuth
+from .model import DeviceInfo, VolumeInfo
 from .pairing import PairingProtocol
 from .remote import RemoteProtocol
 from .remotemessage_pb2 import RemoteDirection
@@ -64,12 +65,12 @@ class AndroidTVRemote:
         self._transport: asyncio.Transport | None = None
         self._remote_message_protocol: RemoteProtocol | None = None
         self._pairing_message_protocol: PairingProtocol | None = None
-        self._reconnect_task: asyncio.Task | None = None
+        self._reconnect_task: asyncio.Task[None] | None = None
         self._ssl_context: ssl.SSLContext | None = None
-        self._is_on_updated_callbacks: list[Callable] = []
-        self._current_app_updated_callbacks: list[Callable] = []
-        self._volume_info_updated_callbacks: list[Callable] = []
-        self._is_available_updated_callbacks: list[Callable] = []
+        self._is_on_updated_callbacks: list[Callable[[bool], None]] = []
+        self._current_app_updated_callbacks: list[Callable[[str], None]] = []
+        self._volume_info_updated_callbacks: list[Callable[[VolumeInfo], None]] = []
+        self._is_available_updated_callbacks: list[Callable[[bool], None]] = []
 
         def is_on_updated(is_on: bool) -> None:
             for callback in self._is_on_updated_callbacks:
@@ -79,7 +80,7 @@ class AndroidTVRemote:
             for callback in self._current_app_updated_callbacks:
                 callback(current_app)
 
-        def volume_info_updated(volume_info: dict[str, str | bool]) -> None:
+        def volume_info_updated(volume_info: VolumeInfo) -> None:
             for callback in self._volume_info_updated_callbacks:
                 callback(volume_info)
 
@@ -107,57 +108,67 @@ class AndroidTVRemote:
         return self._remote_message_protocol.current_app
 
     @property
-    def device_info(self) -> dict[str, str] | None:
+    def device_info(self) -> DeviceInfo | None:
         """Device info (manufacturer, model, sw_version)."""
         if not self._remote_message_protocol:
             return None
         return self._remote_message_protocol.device_info
 
     @property
-    def volume_info(self) -> dict[str, str | bool | int] | None:
+    def volume_info(self) -> VolumeInfo | None:
         """Volume info (level, max, muted)."""
         if not self._remote_message_protocol:
             return None
         return self._remote_message_protocol.volume_info
 
-    def add_is_on_updated_callback(self, callback: Callable) -> None:
+    def add_is_on_updated_callback(self, callback: Callable[[bool], None]) -> None:
         """Add a callback for when is_on is updated."""
         self._is_on_updated_callbacks.append(callback)
 
-    def remove_is_on_updated_callback(self, callback: Callable) -> None:
+    def remove_is_on_updated_callback(self, callback: Callable[[bool], None]) -> None:
         """Remove a callback previously added via add_is_on_updated_callback.
 
         :raises ValueError: if callback not previously added.
         """
         self._is_on_updated_callbacks.remove(callback)
 
-    def add_current_app_updated_callback(self, callback: Callable) -> None:
+    def add_current_app_updated_callback(self, callback: Callable[[str], None]) -> None:
         """Add a callback for when current_app is updated."""
         self._current_app_updated_callbacks.append(callback)
 
-    def remove_current_app_updated_callback(self, callback: Callable) -> None:
+    def remove_current_app_updated_callback(
+        self, callback: Callable[[str], None]
+    ) -> None:
         """Remove a callback previously added via add_current_app_updated_callback.
 
         :raises ValueError: if callback not previously added.
         """
         self._current_app_updated_callbacks.remove(callback)
 
-    def add_volume_info_updated_callback(self, callback: Callable) -> None:
+    def add_volume_info_updated_callback(
+        self, callback: Callable[[VolumeInfo], None]
+    ) -> None:
         """Add a callback for when volume_info is updated."""
         self._volume_info_updated_callbacks.append(callback)
 
-    def remove_volume_info_updated_callback(self, callback: Callable) -> None:
+    def remove_volume_info_updated_callback(
+        self, callback: Callable[[VolumeInfo], None]
+    ) -> None:
         """Remove a callback previously added via add_volume_info_updated_callback.
 
         :raises ValueError: if callback not previously added.
         """
         self._volume_info_updated_callbacks.remove(callback)
 
-    def add_is_available_updated_callback(self, callback: Callable) -> None:
+    def add_is_available_updated_callback(
+        self, callback: Callable[[bool], None]
+    ) -> None:
         """Add a callback for when the Android TV is ready to receive commands or is unavailable."""
         self._is_available_updated_callbacks.append(callback)
 
-    def remove_is_available_updated_callback(self, callback: Callable) -> None:
+    def remove_is_available_updated_callback(
+        self, callback: Callable[[bool], None]
+    ) -> None:
         """Remove a callback previously added via add_is_available_updated_callback.
 
         :raises ValueError: if callback not previously added.
@@ -245,7 +256,7 @@ class AndroidTVRemote:
             raise ConnectionClosed("Connection closed") from con_lost_exc
 
     async def _async_reconnect(
-        self, invalid_auth_callback: Callable | None = None
+        self, invalid_auth_callback: Callable[[], None] | None = None
     ) -> None:
         while self._remote_message_protocol:
             exc = await self._remote_message_protocol.on_con_lost
@@ -279,7 +290,9 @@ class AndroidTVRemote:
                         invalid_auth_callback()
                     return
 
-    def keep_reconnecting(self, invalid_auth_callback: Callable | None = None) -> None:
+    def keep_reconnecting(
+        self, invalid_auth_callback: Callable[[], None] | None = None
+    ) -> None:
         """Create a task to keep reconnecting whenever connection is lost."""
         self._reconnect_task = self._loop.create_task(
             self._async_reconnect(invalid_auth_callback)

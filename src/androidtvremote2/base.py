@@ -16,7 +16,7 @@ from .const import LOGGER
 class ProtobufProtocol(asyncio.Protocol):
     """Protocol for receiving and sending protobuf messages."""
 
-    def __init__(self, on_con_lost: asyncio.Future) -> None:
+    def __init__(self, on_con_lost: asyncio.Future[Exception | None]) -> None:
         """Initialize.
 
         :param on_con_lost: callback for when the connection is lost or closed.

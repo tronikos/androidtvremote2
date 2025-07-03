@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import asyncio
 import hashlib
+from typing import Any
 
 import aiofiles
 from cryptography import x509
@@ -45,7 +46,7 @@ class PairingProtocol(ProtobufProtocol):
 
     def __init__(
         self,
-        on_con_lost: asyncio.Future,
+        on_con_lost: asyncio.Future[Exception | None],
         client_name: str,
         certfile: str,
         loop: asyncio.AbstractEventLoop,
@@ -62,8 +63,8 @@ class PairingProtocol(ProtobufProtocol):
         self._client_name = client_name
         self._certfile = certfile
         self._loop = loop
-        self._on_pairing_started: asyncio.Future | None = None
-        self._on_pairing_finished: asyncio.Future | None = None
+        self._on_pairing_started: asyncio.Future[bool] | None = None
+        self._on_pairing_finished: asyncio.Future[bool] | None = None
 
     async def async_start_pairing(self) -> None:
         """Start the pairing process.
@@ -130,7 +131,9 @@ class PairingProtocol(ProtobufProtocol):
         finally:
             self._on_pairing_finished = None
 
-    async def _async_wait_for_future_or_con_lost(self, future: asyncio.Future) -> None:
+    async def _async_wait_for_future_or_con_lost(
+        self, future: asyncio.Future[Any]
+    ) -> None:
         """Wait for future to finish or connection to be lost."""
         await asyncio.wait(
             (self.on_con_lost, future), return_when=asyncio.FIRST_COMPLETED

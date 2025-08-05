@@ -3,9 +3,9 @@
 from __future__ import annotations
 
 import asyncio
-from collections.abc import Callable
 import os
 import ssl
+from typing import TYPE_CHECKING
 from urllib.parse import urlparse
 
 import aiofiles
@@ -14,10 +14,14 @@ from cryptography import x509
 from .certificate_generator import generate_selfsigned_cert
 from .const import LOGGER
 from .exceptions import CannotConnect, ConnectionClosed, InvalidAuth
-from .model import DeviceInfo, VolumeInfo
 from .pairing import PairingProtocol
 from .remote import RemoteProtocol
 from .remotemessage_pb2 import RemoteDirection
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
+
+    from .model import DeviceInfo, VolumeInfo
 
 
 def _load_cert_chain(certfile: str, keyfile: str) -> ssl.SSLContext:
@@ -136,39 +140,29 @@ class AndroidTVRemote:
         """Add a callback for when current_app is updated."""
         self._current_app_updated_callbacks.append(callback)
 
-    def remove_current_app_updated_callback(
-        self, callback: Callable[[str], None]
-    ) -> None:
+    def remove_current_app_updated_callback(self, callback: Callable[[str], None]) -> None:
         """Remove a callback previously added via add_current_app_updated_callback.
 
         :raises ValueError: if callback not previously added.
         """
         self._current_app_updated_callbacks.remove(callback)
 
-    def add_volume_info_updated_callback(
-        self, callback: Callable[[VolumeInfo], None]
-    ) -> None:
+    def add_volume_info_updated_callback(self, callback: Callable[[VolumeInfo], None]) -> None:
         """Add a callback for when volume_info is updated."""
         self._volume_info_updated_callbacks.append(callback)
 
-    def remove_volume_info_updated_callback(
-        self, callback: Callable[[VolumeInfo], None]
-    ) -> None:
+    def remove_volume_info_updated_callback(self, callback: Callable[[VolumeInfo], None]) -> None:
         """Remove a callback previously added via add_volume_info_updated_callback.
 
         :raises ValueError: if callback not previously added.
         """
         self._volume_info_updated_callbacks.remove(callback)
 
-    def add_is_available_updated_callback(
-        self, callback: Callable[[bool], None]
-    ) -> None:
+    def add_is_available_updated_callback(self, callback: Callable[[bool], None]) -> None:
         """Add a callback for when the Android TV is ready to receive commands or is unavailable."""
         self._is_available_updated_callbacks.append(callback)
 
-    def remove_is_available_updated_callback(
-        self, callback: Callable[[bool], None]
-    ) -> None:
+    def remove_is_available_updated_callback(self, callback: Callable[[bool], None]) -> None:
         """Remove a callback previously added via add_is_available_updated_callback.
 
         :raises ValueError: if callback not previously added.
@@ -193,9 +187,7 @@ class AndroidTVRemote:
         if self._ssl_context:
             return self._ssl_context
         try:
-            ssl_context = await self._loop.run_in_executor(
-                None, _load_cert_chain, self._certfile, self._keyfile
-            )
+            ssl_context = await self._loop.run_in_executor(None, _load_cert_chain, self._certfile, self._keyfile)
         except FileNotFoundError as exc:
             LOGGER.debug("Missing certificate. Error: %s", exc)
             raise InvalidAuth from exc
@@ -231,18 +223,12 @@ class AndroidTVRemote:
                 ssl=ssl_context,
             )
         except OSError as exc:
-            LOGGER.debug(
-                "Couldn't connect to %s:%s. Error: %s", self.host, self._api_port, exc
-            )
+            LOGGER.debug("Couldn't connect to %s:%s. Error: %s", self.host, self._api_port, exc)
             if isinstance(exc, ssl.SSLError):
                 raise InvalidAuth("Need to pair") from exc
-            raise CannotConnect(
-                f"Couldn't connect to {self.host}:{self._api_port}"
-            ) from exc
+            raise CannotConnect(f"Couldn't connect to {self.host}:{self._api_port}") from exc
 
-        await asyncio.wait(
-            (on_con_lost, on_remote_started), return_when=asyncio.FIRST_COMPLETED
-        )
+        await asyncio.wait((on_con_lost, on_remote_started), return_when=asyncio.FIRST_COMPLETED)
         if on_con_lost.done():
             con_lost_exc = on_con_lost.result()
             LOGGER.debug(
@@ -255,17 +241,13 @@ class AndroidTVRemote:
                 raise InvalidAuth("Need to pair again") from con_lost_exc
             raise ConnectionClosed("Connection closed") from con_lost_exc
 
-    async def _async_reconnect(
-        self, invalid_auth_callback: Callable[[], None] | None = None
-    ) -> None:
+    async def _async_reconnect(self, invalid_auth_callback: Callable[[], None] | None = None) -> None:
         while self._remote_message_protocol:
             exc = await self._remote_message_protocol.on_con_lost
             self._on_is_available_updated(False)
             LOGGER.debug("Disconnected from %s. Error: %s", self.host, exc)
             delay_seconds = 0.1
-            LOGGER.debug(
-                "Trying to reconnect to %s in %s seconds", self.host, delay_seconds
-            )
+            LOGGER.debug("Trying to reconnect to %s in %s seconds", self.host, delay_seconds)
             while self._remote_message_protocol:
                 await asyncio.sleep(delay_seconds)
                 try:
@@ -290,13 +272,9 @@ class AndroidTVRemote:
                         invalid_auth_callback()
                     return
 
-    def keep_reconnecting(
-        self, invalid_auth_callback: Callable[[], None] | None = None
-    ) -> None:
+    def keep_reconnecting(self, invalid_auth_callback: Callable[[], None] | None = None) -> None:
         """Create a task to keep reconnecting whenever connection is lost."""
-        self._reconnect_task = self._loop.create_task(
-            self._async_reconnect(invalid_auth_callback)
-        )
+        self._reconnect_task = self._loop.create_task(self._async_reconnect(invalid_auth_callback))
 
     def disconnect(self) -> None:
         """Disconnect any open connections."""
@@ -318,17 +296,11 @@ class AndroidTVRemote:
         """
         ssl_context = await self._create_ssl_context()
         try:
-            _, writer = await asyncio.open_connection(
-                self.host, self._pair_port, ssl=ssl_context
-            )
+            _, writer = await asyncio.open_connection(self.host, self._pair_port, ssl=ssl_context)
         except OSError as exc:
-            LOGGER.debug(
-                "Couldn't connect to %s:%s. %s", self.host, self._pair_port, exc
-            )
+            LOGGER.debug("Couldn't connect to %s:%s. %s", self.host, self._pair_port, exc)
             raise CannotConnect from exc
-        server_cert_bytes = writer.transport.get_extra_info("ssl_object").getpeercert(
-            True
-        )
+        server_cert_bytes = writer.transport.get_extra_info("ssl_object").getpeercert(True)
         writer.close()
         server_cert = x509.load_der_x509_certificate(server_cert_bytes)
         # NVIDIA SHIELD example:
@@ -370,9 +342,7 @@ class AndroidTVRemote:
                 ssl=ssl_context,
             )
         except OSError as exc:
-            LOGGER.debug(
-                "Couldn't connect to %s:%s. %s", self.host, self._pair_port, exc
-            )
+            LOGGER.debug("Couldn't connect to %s:%s. %s", self.host, self._pair_port, exc)
             raise CannotConnect from exc
         await self._pairing_message_protocol.async_start_pairing()
 
@@ -389,9 +359,7 @@ class AndroidTVRemote:
         await self._pairing_message_protocol.async_finish_pairing(pairing_code)
         self.disconnect()
 
-    def send_key_command(
-        self, key_code: int | str, direction: int | str = RemoteDirection.SHORT
-    ) -> None:
+    def send_key_command(self, key_code: int | str, direction: int | str = RemoteDirection.SHORT) -> None:
         """Send a key press to Android TV.
 
         This does not block; it buffers the data and arranges for it to be sent out asynchronously.
@@ -431,6 +399,4 @@ class AndroidTVRemote:
             LOGGER.debug("Called send_launch_app_command after disconnect")
             raise ConnectionClosed("Called send_launch_app_command after disconnect")
         prefix = "" if urlparse(app_link_or_app_id).scheme else "market://launch?id="
-        self._remote_message_protocol.send_launch_app_command(
-            f"{prefix}{app_link_or_app_id}"
-        )
+        self._remote_message_protocol.send_launch_app_command(f"{prefix}{app_link_or_app_id}")

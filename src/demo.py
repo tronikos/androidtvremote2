@@ -1,8 +1,10 @@
+# ruff: noqa: T201, PLR0912
 """Demo usage of AndroidTVRemote."""
 
 import argparse
 import asyncio
 import logging
+import sys
 from typing import cast
 
 from pynput import keyboard
@@ -67,14 +69,14 @@ async def _bind_keyboard(remote: AndroidTVRemote) -> None:
         key = await key_queue.get()
         if key is None:
             continue
-        if key in key_mappings:
+        if isinstance(key, keyboard.Key) and key in key_mappings:
             remote.send_key_command(key_mappings[key])
         if not isinstance(key, keyboard.KeyCode):
             continue
         if key.char == "q":
             remote.disconnect()
             return
-        elif key.char == "m":
+        if key.char == "m":
             remote.send_key_command("MUTE")
         elif key.char == "+":
             remote.send_key_command("VOLUME_UP")
@@ -107,16 +109,11 @@ async def _host_from_zeroconf(timeout: float) -> str:
             async_display_service_info(zeroconf, service_type, name)
         )
 
-    async def async_display_service_info(
-        zeroconf: Zeroconf, service_type: str, name: str
-    ) -> None:
+    async def async_display_service_info(zeroconf: Zeroconf, service_type: str, name: str) -> None:
         info = AsyncServiceInfo(service_type, name)
         await info.async_request(zeroconf, 3000)
         if info:
-            addresses = [
-                f"{addr}:{cast(int, info.port)}"
-                for addr in info.parsed_scoped_addresses()
-            ]
+            addresses = [f"{addr}:{cast('int', info.port)}" for addr in info.parsed_scoped_addresses()]
             print(f"  Name: {name}")
             print(f"  Addresses: {', '.join(addresses)}")
             if info.properties:
@@ -131,12 +128,8 @@ async def _host_from_zeroconf(timeout: float) -> str:
 
     zc = AsyncZeroconf()
     services = ["_androidtvremote2._tcp.local."]
-    print(
-        f"\nBrowsing {services} service(s) for {timeout} seconds, press Ctrl-C to exit...\n"
-    )
-    browser = AsyncServiceBrowser(
-        zc.zeroconf, services, handlers=[_async_on_service_state_change]
-    )
+    print(f"\nBrowsing {services} service(s) for {timeout} seconds, press Ctrl-C to exit...\n")
+    browser = AsyncServiceBrowser(zc.zeroconf, services, handlers=[_async_on_service_state_change])
     await asyncio.sleep(timeout)
 
     await browser.async_cancel()
@@ -147,24 +140,18 @@ async def _host_from_zeroconf(timeout: float) -> str:
 
 async def _pair(remote: AndroidTVRemote) -> None:
     name, mac = await remote.async_get_name_and_mac()
-    if (
-        input(
-            f"Do you want to pair with {remote.host} {name} {mac}"
-            " (this will turn on the Android TV)? y/n: "
-        )
-        != "y"
-    ):
-        exit()
+    if input(f"Do you want to pair with {remote.host} {name} {mac} (this will turn on the Android TV)? y/n: ") != "y":
+        sys.exit()
     await remote.async_start_pairing()
     while True:
         pairing_code = input("Enter pairing code: ")
         try:
             return await remote.async_finish_pairing(pairing_code)
-        except InvalidAuth as exc:
-            _LOGGER.error("Invalid pairing code. Error: %s", exc)
+        except InvalidAuth:
+            _LOGGER.exception("Invalid pairing code")
             continue
-        except ConnectionClosed as exc:
-            _LOGGER.error("Initialize pair again. Error: %s", exc)
+        except ConnectionClosed:
+            _LOGGER.exception("Initialize pair again")
             return await _pair(remote)
 
 
@@ -192,9 +179,7 @@ async def _main() -> None:
         help="zeroconf scan timeout in seconds",
         default=3,
     )
-    parser.add_argument(
-        "-v", "--verbose", help="enable verbose logging", action="store_true"
-    )
+    parser.add_argument("-v", "--verbose", help="enable verbose logging", action="store_true")
     args = parser.parse_args()
 
     logging.basicConfig(level=logging.DEBUG if args.verbose else logging.INFO)
@@ -211,11 +196,11 @@ async def _main() -> None:
         try:
             await remote.async_connect()
             break
-        except InvalidAuth as exc:
-            _LOGGER.error("Need to pair again. Error: %s", exc)
+        except InvalidAuth:
+            _LOGGER.exception("Need to pair again")
             await _pair(remote)
-        except (CannotConnect, ConnectionClosed) as exc:
-            _LOGGER.error("Cannot connect, exiting. Error: %s", exc)
+        except (CannotConnect, ConnectionClosed):
+            _LOGGER.exception("Cannot connect, exiting")
             return
 
     remote.keep_reconnecting()

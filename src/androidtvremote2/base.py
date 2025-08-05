@@ -3,14 +3,16 @@
 from __future__ import annotations
 
 import asyncio
-from typing import cast
+from typing import TYPE_CHECKING, cast
 
 from google.protobuf import text_format
 from google.protobuf.internal.decoder import _DecodeVarint  # type: ignore[attr-defined]
 from google.protobuf.internal.encoder import _EncodeVarint  # type: ignore[attr-defined]
-from google.protobuf.message import Message
 
 from .const import LOGGER
+
+if TYPE_CHECKING:
+    from google.protobuf.message import Message
 
 
 class ProtobufProtocol(asyncio.Protocol):
@@ -29,7 +31,7 @@ class ProtobufProtocol(asyncio.Protocol):
     def connection_made(self, transport: asyncio.BaseTransport) -> None:
         """Store transport when a connection is made."""
         LOGGER.debug("Connected to %s", transport.get_extra_info("peername"))
-        self.transport = cast(asyncio.Transport, transport)
+        self.transport = cast("asyncio.Transport", transport)
 
     def connection_lost(self, exc: Exception | None) -> None:
         """Notify on_con_lost when the connection is lost or closed."""
@@ -69,9 +71,7 @@ class ProtobufProtocol(asyncio.Protocol):
         This does not block; it buffers the data and arranges for it to be sent out asynchronously.
         """
         if should_debug_log:
-            LOGGER.debug(
-                "Sending: %s", text_format.MessageToString(msg, as_one_line=True)
-            )
+            LOGGER.debug("Sending: %s", text_format.MessageToString(msg, as_one_line=True))
         if not self.transport or self.transport.is_closing():
             LOGGER.debug("Connection is closed!")
             return

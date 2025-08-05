@@ -7,15 +7,14 @@
 from __future__ import annotations
 
 import asyncio
-from collections.abc import Callable
 from enum import IntFlag
+from typing import TYPE_CHECKING
 
 from google.protobuf import text_format
 from google.protobuf.message import DecodeError
 
 from .base import ProtobufProtocol
 from .const import LOGGER
-from .model import DeviceInfo, VolumeInfo
 from .remotemessage_pb2 import (
     RemoteDirection,
     RemoteEditInfo,
@@ -24,6 +23,11 @@ from .remotemessage_pb2 import (
     RemoteKeyCode,
     RemoteMessage,
 )
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
+
+    from .model import DeviceInfo, VolumeInfo
 
 LOG_PING_REQUESTS = False
 ERROR_SUGGESTION_MSG = (
@@ -81,12 +85,7 @@ class RemoteProtocol(ProtobufProtocol):
         self._on_current_app_updated = on_current_app_updated
         self._on_volume_info_updated = on_volume_info_updated
         self._active_features = (
-            Feature.PING
-            | Feature.KEY
-            | Feature.POWER
-            | Feature.VOLUME
-            | Feature.APP_LINK
-            | (Feature.IME if enable_ime else 0)
+            Feature.PING | Feature.KEY | Feature.POWER | Feature.VOLUME | Feature.APP_LINK | (Feature.IME if enable_ime else 0)
         )
         self.is_on = False
         self.current_app = ""
@@ -98,9 +97,7 @@ class RemoteProtocol(ProtobufProtocol):
         self._idle_disconnect_task: asyncio.Task[None] | None = None
         self._reset_idle_disconnect_task()
 
-    def send_key_command(
-        self, key_code: int | str, direction: int | str = RemoteDirection.SHORT
-    ) -> None:
+    def send_key_command(self, key_code: int | str, direction: int | str = RemoteDirection.SHORT) -> None:
         """Send a key press to Android TV.
 
         This does not block; it buffers the data and arranges for it to be sent out asynchronously.
@@ -124,6 +121,7 @@ class RemoteProtocol(ProtobufProtocol):
         msg.remote_key_inject.key_code = key_code  # type: ignore[assignment]
         msg.remote_key_inject.direction = direction  # type: ignore[assignment]
         self._send_message(msg)
+        return None
 
     def send_text(self, text: str) -> None:
         """Send a text string to Android TV via the input method.
@@ -160,7 +158,7 @@ class RemoteProtocol(ProtobufProtocol):
         msg.remote_app_link_launch_request.app_link = app_link
         self._send_message(msg)
 
-    def _handle_message(self, raw_msg: bytes) -> None:
+    def _handle_message(self, raw_msg: bytes) -> None:  # noqa: PLR0912
         """Handle a message from the server."""
         self._reset_idle_disconnect_task()
         msg = RemoteMessage()
@@ -170,9 +168,7 @@ class RemoteProtocol(ProtobufProtocol):
             LOGGER.debug("Couldn't parse as RemoteMessage. %s", exc)
             return
         if LOG_PING_REQUESTS or not msg.HasField("remote_ping_request"):
-            LOGGER.debug(
-                "Received: %s", text_format.MessageToString(msg, as_one_line=True)
-            )
+            LOGGER.debug("Received: %s", text_format.MessageToString(msg, as_one_line=True))
 
         new_msg = RemoteMessage()
         log_send = True
@@ -187,13 +183,9 @@ class RemoteProtocol(ProtobufProtocol):
             supported_features = Feature(cfg.code1)
             LOGGER.debug("Device supports: %s", [supported_features])
             if Feature.KEY not in supported_features:
-                LOGGER.error(
-                    "Device doesn't support sending keys. %s", ERROR_SUGGESTION_MSG
-                )
+                LOGGER.error("Device doesn't support sending keys. %s", ERROR_SUGGESTION_MSG)
             if Feature.APP_LINK not in supported_features:
-                LOGGER.error(
-                    "Device doesn't support sending app links. %s", ERROR_SUGGESTION_MSG
-                )
+                LOGGER.error("Device doesn't support sending app links. %s", ERROR_SUGGESTION_MSG)
             self._active_features &= supported_features
             new_msg.remote_configure.code1 = self._active_features.value
             new_msg.remote_configure.device_info.unknown1 = 1
@@ -224,9 +216,7 @@ class RemoteProtocol(ProtobufProtocol):
             new_msg.remote_ping_response.val1 = msg.remote_ping_request.val1
             log_send = LOG_PING_REQUESTS
         else:
-            LOGGER.debug(
-                "Unhandled: %s", text_format.MessageToString(msg, as_one_line=True)
-            )
+            LOGGER.debug("Unhandled: %s", text_format.MessageToString(msg, as_one_line=True))
 
         if new_msg != RemoteMessage():
             self._send_message(new_msg, log_send)
@@ -234,9 +224,7 @@ class RemoteProtocol(ProtobufProtocol):
     def _reset_idle_disconnect_task(self) -> None:
         if self._idle_disconnect_task is not None:
             self._idle_disconnect_task.cancel()
-        self._idle_disconnect_task = self._loop.create_task(
-            self._async_idle_disconnect()
-        )
+        self._idle_disconnect_task = self._loop.create_task(self._async_idle_disconnect())
 
     async def _async_idle_disconnect(self) -> None:
         # Disconnect if there is no message from the server or client within

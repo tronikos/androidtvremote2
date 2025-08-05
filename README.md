@@ -29,7 +29,7 @@ source .venv/bin/activate
 
 # Install dependencies
 python -m pip install --upgrade pip
-python -m pip install .
+python -m pip install -e .
 
 # Generate *_pb2.py from *.proto
 python -m pip install grpcio-tools mypy-protobuf
@@ -37,20 +37,15 @@ python -m grpc_tools.protoc src/androidtvremote2/*.proto --python_out=src/androi
 
 # Run pre-commit
 python -m pip install pre-commit
-pre-commit autoupdate
 pre-commit install
 pre-commit run --all-files
 
-# Alternative: run formatter, lint, and type checking
-python -m pip install isort black flake8 ruff mypy
-isort . ; black . ; flake8 . ; ruff check . --fix ; mypy --install-types .
-
 # Run tests
-python -m pip install pytest
+python -m pip install -e ".[test]"
 pytest
 
 # Run demo
-python -m pip install pynput zeroconf
+python -m pip install -e ".[demo]"
 python src/demo.py
 
 # Build package

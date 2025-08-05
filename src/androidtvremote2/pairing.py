@@ -104,9 +104,7 @@ class PairingProtocol(ProtobufProtocol):
         client_modulus, client_exponent = _get_modulus_and_exponent(client_cert)
 
         assert self.transport
-        server_cert_bytes = self.transport.get_extra_info("ssl_object").getpeercert(
-            True
-        )
+        server_cert_bytes = self.transport.get_extra_info("ssl_object").getpeercert(True)
         server_cert = x509.load_der_x509_certificate(server_cert_bytes)
         server_modulus, server_exponent = _get_modulus_and_exponent(server_cert)
 
@@ -131,13 +129,9 @@ class PairingProtocol(ProtobufProtocol):
         finally:
             self._on_pairing_finished = None
 
-    async def _async_wait_for_future_or_con_lost(
-        self, future: asyncio.Future[Any]
-    ) -> None:
+    async def _async_wait_for_future_or_con_lost(self, future: asyncio.Future[Any]) -> None:
         """Wait for future to finish or connection to be lost."""
-        await asyncio.wait(
-            (self.on_con_lost, future), return_when=asyncio.FIRST_COMPLETED
-        )
+        await asyncio.wait((self.on_con_lost, future), return_when=asyncio.FIRST_COMPLETED)
         if future.done():
             if future.exception():
                 raise ConnectionClosed(future.exception())
@@ -180,9 +174,7 @@ class PairingProtocol(ProtobufProtocol):
             enc.symbol_length = 6
         elif msg.HasField("options"):
             new_msg.configuration.client_role = Options.RoleType.ROLE_TYPE_INPUT
-            new_msg.configuration.encoding.type = (
-                Options.Encoding.ENCODING_TYPE_HEXADECIMAL
-            )
+            new_msg.configuration.encoding.type = Options.Encoding.ENCODING_TYPE_HEXADECIMAL
             new_msg.configuration.encoding.symbol_length = 6
         elif msg.HasField("configuration_ack"):
             if self._on_pairing_started:
@@ -193,14 +185,8 @@ class PairingProtocol(ProtobufProtocol):
                 self._on_pairing_finished.set_result(True)
             return
         else:
-            LOGGER.debug(
-                "Unhandled msg: %s", text_format.MessageToString(msg, as_one_line=True)
-            )
-            self._handle_error(
-                Exception(
-                    f"Unhandled msg: {text_format.MessageToString(msg, as_one_line=True)}"
-                )
-            )
+            LOGGER.debug("Unhandled msg: %s", text_format.MessageToString(msg, as_one_line=True))
+            self._handle_error(Exception(f"Unhandled msg: {text_format.MessageToString(msg, as_one_line=True)}"))
             return
 
         self._send_message(new_msg)

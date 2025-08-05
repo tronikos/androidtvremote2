@@ -1,7 +1,7 @@
 [project]
 name = "androidtvremote2"
 version = "0.2.3"
-license = {text = "Apache-2.0"}
+license = "Apache-2.0"
 authors = [
     { name="tronikos", email="tronikos@gmail.com" },
 ]
@@ -14,6 +14,16 @@ dependencies = [
     "protobuf>=4.21",
 ]
 
+[project.optional-dependencies]
+test = [
+    "pytest",
+]
+demo = [
+    "pynput",
+    "zeroconf",
+]
+
+
 [project.urls]
 "Homepage" = "https://github.com/tronikos/androidtvremote2"
 "Bug Tracker" = "https://github.com/tronikos/androidtvremote2/issues"
@@ -22,58 +32,62 @@ dependencies = [
 requires = ["setuptools"]
 build-backend = "setuptools.build_meta"
 
-[tool.black]
-extend-exclude = "_pb2.py|_pb2_grpc.py"
-
-[tool.isort]
-profile = "black"
-force_sort_within_sections = true
-combine_as_imports = true
-extend_skip_glob = ["*_pb2.py", "*_pb2_grpc.py"]
-
 [tool.ruff]
 target-version = "py310"
-exclude = ["*_pb2.py", "*_pb2_grpc.py", "*.pyi"]
 line-length = 127
-
-lint.select = [
-    "B007", # Loop control variable {name} not used within loop body
-    "B014", # Exception handler with duplicate exception
-    "C",  # complexity
-    "D",  # docstrings
-    "E",  # pycodestyle
-    "F",  # pyflakes/autoflake
-    "ICN001", # import concentions; {name} should be imported as {asname}
-    "PGH004",  # Use specific rule codes when using noqa
-    "PLC0414", # Useless import alias. Import alias does not rename original package.
-    "SIM105", # Use contextlib.suppress({exception}) instead of try-except-pass
-    "SIM117", # Merge with-statements that use the same scope
-    "SIM118", # Use {key} in {dict} instead of {key} in {dict}.keys()
-    "SIM201", # Use {left} != {right} instead of not {left} == {right}
-    "SIM212", # Use {a} if {a} else {b} instead of {b} if not {a} else {a}
-    "SIM300", # Yoda conditions. Use 'age == 42' instead of '42 == age'.
-    "SIM401", # Use get from dict with default instead of an if block
-    "T20",  # flake8-print
-    "TRY004", # Prefer TypeError exception for invalid type
-    "RUF006", # Store a reference to the return value of asyncio.create_task
-    "UP",  # pyupgrade
-    "W",  # pycodestyle
+exclude = [
+    ".git", ".mypy_cache", ".ruff_cache", ".venv", "__pypackages__",
+    "build", "dist", "venv", "*_pb2.py", "*_pb2_grpc.py", "*.pyi"
 ]
 
-lint.ignore = [
+[tool.ruff.lint]
+select = [
+    "A",  # flake8-builtins
+    "ASYNC",  # flake8-async
+    "B",  # flake8-bugbear
+    "C",  # flake8-mccabe
+    "C4",  # flake8-comprehensions
+    "D",  # pydocstyle
+    "E",  # pycodestyle (error)
+    "F",  # pyflakes
+    "G",  # flake8-logging-format
+    "I",  # isort
+    "PGH",  # pygrep-hooks
+    "PL",  # Pylint
+    "RET",  # flake8-return
+    "RUF",  # Ruff-specific rules
+    "S",  # flake8-bandit (security)
+    "SIM",  # flake8-simplify
+    "T20",  # flake8-print
+    "TCH",  # flake8-type-checking
+    "TRY",  # tryceratops
+    "UP",  # pyupgrade
+    "W",  # pycodestyle (warning)
+]
+ignore = [
+    "S101",  # Ignore assert
     "D203",  # 1 blank line required before class docstring
     "D213",  # Multi-line docstring summary should start at the second line
-    # keep-runtime-annotations
-    'UP006', # Non PEP585 annotations
-    'UP007', # Non PEP604 annotations
+    "PLR0913",  # Too many arguments in function definition
+    "PLR1714",  # Consider merging multiple comparisons
+    "PLR2004",  # Magic value used in comparison
+    "TRY003",  # Avoid specifying long messages outside the exception class
 ]
-
-[tool.ruff.lint.flake8-pytest-style]
-fixture-parentheses = false
-
-[tool.ruff.lint.per-file-ignores]
-# Allow for demo script to write to stdout
-"demo.py" = ["T201"]
+fixable = ["ALL"]
 
 [tool.ruff.lint.mccabe]
 max-complexity = 25
+
+[tool.mypy]
+python_version = "3.10"
+exclude = [".venv", "venv", "build"]
+pretty = true
+strict = true
+show_error_codes = true
+warn_incomplete_stub = true
+enable_error_code = ["ignore-without-code", "redundant-self", "truthy-iterable"]
+
+[tool.codespell]
+skip = "*.json,*.csv,*.lock,./.git/*,./.venv/*"
+check-filenames = true
+check-hidden = true

@@ -3,6 +3,7 @@
 from .androidtv_remote import AndroidTVRemote
 from .exceptions import CannotConnect, ConnectionClosed, InvalidAuth
 from .model import DeviceInfo, VolumeInfo
+from .voice_stream import VoiceStream
 
 __all__ = [
     "AndroidTVRemote",
@@ -10,5 +11,6 @@ __all__ = [
     "ConnectionClosed",
     "DeviceInfo",
     "InvalidAuth",
+    "VoiceStream",
     "VolumeInfo",
 ]

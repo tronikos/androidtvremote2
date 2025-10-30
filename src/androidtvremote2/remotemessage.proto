@@ -36,15 +36,20 @@ message RemoteStart {
 }
 
 message RemoteVoiceEnd {
-
+  int32 session_id = 1;
 }
 
 message RemoteVoicePayload {
-
+  int32 session_id = 1;
+  // Audio configuration in RemoteVoiceBegin is unknown.
+  // Default audio sample payload is a sequence of 16-bit PCM, 8 kHz, mono samples, split into 20 KB messages.
+  bytes samples = 2;
 }
 
 message RemoteVoiceBegin {
-
+  int32 session_id = 1;
+  // Package name is sent from the Android device as a response to sending KEYCODE_SEARCH and not required when sending audio.
+  string package_name = 2;
 }
 
 message RemoteTextFieldStatus {

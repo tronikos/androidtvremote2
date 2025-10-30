@@ -6,6 +6,8 @@ For a list of the most common commands you can send to the Android TV see: [TvKe
 For a full list see [remotemessage.proto](https://github.com/tronikos/androidtvremote2/blob/b4c49ac03043b1b9c40c2f2960e466d5a3b8bd67/src/androidtvremote2/remotemessage.proto#L90).
 In addition to commands you can send URLs to open apps registered to handle them. See [this guide](https://community.home-assistant.io/t/android-tv-remote-app-links-deep-linking-guide/567921) for how to find deep links for apps.
 
+Voice commands can also be sent as PCM 16-bit mono 8 kHz audio data.
+
 ## Credits
 
 - Official [implementation](https://android.googlesource.com/platform/external/google-tv-pairing-protocol/+/refs/heads/master) of the pairing protocol in Java
@@ -52,3 +54,7 @@ python src/demo.py
 python -m pip install build
 python -m build
 ```
+
+The voice demo requires the [PyAudio](https://pypi.org/project/PyAudio/) library.
+Depending on the target platform, [PortAudio](https://www.portaudio.com/) might have to be installed manually,
+see [PyAudio installation](https://people.csail.mit.edu/hubert/pyaudio/) for more information.

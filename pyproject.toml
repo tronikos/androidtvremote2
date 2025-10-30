@@ -19,6 +19,7 @@ test = [
     "pytest",
 ]
 demo = [
+    "pyaudio",
     "pynput",
     "zeroconf",
 ]
@@ -86,6 +87,10 @@ strict = true
 show_error_codes = true
 warn_incomplete_stub = true
 enable_error_code = ["ignore-without-code", "redundant-self", "truthy-iterable"]
+
+[[tool.mypy.overrides]]
+module = ["pyaudio"]
+ignore_missing_imports = true
 
 [tool.codespell]
 skip = "*.json,*.csv,*.lock,./.git/*,./.venv/*"

@@ -1,12 +1,16 @@
-# ruff: noqa: T201, PLR0912
+# ruff: noqa: T201, PLR0912, PLR0915
 """Demo usage of AndroidTVRemote."""
 
 import argparse
 import asyncio
 import logging
+import os
 import sys
+import time
+import wave
 from typing import cast
 
+import pyaudio
 from pynput import keyboard
 from zeroconf import ServiceStateChange, Zeroconf
 from zeroconf.asyncio import AsyncServiceBrowser, AsyncServiceInfo, AsyncZeroconf
@@ -20,6 +24,14 @@ from androidtvremote2 import (
 )
 
 _LOGGER = logging.getLogger(__name__)
+
+VOICE_ENABLED = True
+VOICE_RECORD_SECONDS = 5
+VOICE_STREAM_SECONDS = 10
+VOICE_FORMAT = pyaudio.paInt16
+VOICE_CHANNELS = 1
+VOICE_RATE = 8000
+VOICE_FILE = "voice_command.wav"
 
 
 async def _bind_keyboard(remote: AndroidTVRemote) -> None:
@@ -39,7 +51,11 @@ async def _bind_keyboard(remote: AndroidTVRemote) -> None:
         "\n- 'a': Amazon Prime Video"
         "\n- 'k': Kodi"
         "\n- 'q': quit"
-        "\n- 't': send text 'Hello world' to Android TV\n\n"
+        "\n- 't': send text 'Hello world' to Android TV"
+        "\n- 'v': stream a voice command from the default audio input. Press v again to stop streaming."
+        "\n- 'r': record a " + str(VOICE_RECORD_SECONDS) + "s voice command"
+        "\n- 'p': play back pre-recorded voice command"
+        "\n- 'w': send pre-recorded voice command in " + VOICE_FILE + " to Android TV\n\n"
     )
     key_mappings = {
         keyboard.Key.up: "DPAD_UP",
@@ -65,6 +81,8 @@ async def _bind_keyboard(remote: AndroidTVRemote) -> None:
         return queue
 
     key_queue = transmit_keys()
+    voice_task: asyncio.Task[None] | None = None
+    voice_stop_event = asyncio.Event()
     while True:
         key = await key_queue.get()
         if key is None:
@@ -94,6 +112,20 @@ async def _bind_keyboard(remote: AndroidTVRemote) -> None:
             remote.send_launch_app_command("org.xbmc.kodi")
         elif key.char == "t":
             remote.send_text("Hello World!")
+        if key.char == "r":
+            _record_voice_command(VOICE_FILE)
+        elif key.char == "p":
+            _play_voice_command(VOICE_FILE)
+        elif key.char == "v":
+            if voice_task is not None and not voice_task.done():
+                print("Stopping voice recording")
+                voice_stop_event.set()
+                continue
+            print("Starting voice recording. Press v again to stop. Auto stop after " + str(VOICE_STREAM_SECONDS) + "s")
+            voice_stop_event.clear()
+            voice_task = asyncio.get_event_loop().create_task(_stream_voice(remote, voice_stop_event))
+        elif key.char == "w":
+            await _send_voice(VOICE_FILE, remote)
 
 
 async def _host_from_zeroconf(timeout: float) -> str:
@@ -186,7 +218,7 @@ async def _main() -> None:
 
     host = args.host or await _host_from_zeroconf(args.scan_timeout)
 
-    remote = AndroidTVRemote(args.client_name, args.certfile, args.keyfile, host)
+    remote = AndroidTVRemote(args.client_name, args.certfile, args.keyfile, host, enable_voice=VOICE_ENABLED)
 
     if await remote.async_generate_cert_if_missing():
         _LOGGER.info("Generated new certificate")
@@ -209,6 +241,7 @@ async def _main() -> None:
     _LOGGER.info("is_on: %s", remote.is_on)
     _LOGGER.info("current_app: %s", remote.current_app)
     _LOGGER.info("volume_info: %s", remote.volume_info)
+    _LOGGER.info("voice enabled: %s", remote.is_voice_enabled)
 
     def is_on_updated(is_on: bool) -> None:
         _LOGGER.info("Notified that is_on: %s", is_on)
@@ -228,6 +261,148 @@ async def _main() -> None:
     remote.add_is_available_updated_callback(is_available_updated)
 
     await _bind_keyboard(remote)
+
+
+async def _send_voice(wav_file: str, remote: AndroidTVRemote) -> None:
+    """Send a WAV file as a voice command."""
+    if not os.path.isfile(wav_file):
+        _LOGGER.error("WAV file not found: %s", wav_file)
+        return
+    if not remote.is_voice_enabled:
+        _LOGGER.warning("Voice feature is not enabled in the client or not supported on the device")
+        return
+
+    try:
+        with wave.open(wav_file, "rb") as wf:
+            if wf.getnchannels() != 1:
+                _LOGGER.error("Only mono WAV files are supported")
+                return
+            if wf.getsampwidth() != 2:
+                _LOGGER.error("Only 16-bit WAV files are supported")
+                return
+            if wf.getframerate() != 8000:
+                _LOGGER.error("Only 8 kHz WAV files are supported")
+                return
+            nframes = wf.getnframes()
+            pcm_data = wf.readframes(nframes)
+
+        _LOGGER.debug("Loaded WAV file '%s': frames=%d, bytes=%d", wav_file, nframes, len(pcm_data))
+
+        async with await remote.start_voice() as session:
+            session.send_chunk(pcm_data)
+    except FileNotFoundError:
+        _LOGGER.exception("WAV file not found")
+    except wave.Error:
+        _LOGGER.exception("Invalid/unsupported WAV file %s", wav_file)
+    except asyncio.TimeoutError:
+        _LOGGER.warning("Timeout: could not start voice session")
+    except Exception:
+        _LOGGER.exception("Unexpected error in send_voice")
+
+
+def _record_voice_command(wav_file: str) -> None:
+    """Record a WAV file from the default audio input."""
+    with wave.open(wav_file, "wb") as wf:
+        p = pyaudio.PyAudio()
+        wf.setnchannels(VOICE_CHANNELS)
+        wf.setsampwidth(p.get_sample_size(VOICE_FORMAT))
+        wf.setframerate(VOICE_RATE)
+
+        def callback(in_data: bytes, frame_count: object, time_info: object, status: object) -> tuple[bytes | None, int]:
+            wf.writeframes(in_data)
+            return None, pyaudio.paContinue
+
+        stream = p.open(format=VOICE_FORMAT, channels=VOICE_CHANNELS, rate=VOICE_RATE, input=True, stream_callback=callback)
+
+        print("Recording " + str(VOICE_RECORD_SECONDS) + "s voice command to:", wav_file)
+        start = time.time()
+        while stream.is_active() and (time.time() - start) < VOICE_RECORD_SECONDS:
+            time.sleep(0.1)
+        print("Recording stopped")
+
+        stream.close()
+        p.terminate()
+
+
+def _play_voice_command(wav_file: str) -> None:
+    """Play a WAV file on the default audio output."""
+    if not os.path.isfile(wav_file):
+        _LOGGER.error("WAV file not found: %s", wav_file)
+        return
+    print("Playing back recorded voice command:", wav_file)
+    with wave.open(wav_file, "rb") as wf:
+        p = pyaudio.PyAudio()
+        stream = p.open(
+            format=p.get_format_from_width(wf.getsampwidth()), channels=wf.getnchannels(), rate=wf.getframerate(), output=True
+        )
+
+        chunk_size = 1024
+        while len(data := wf.readframes(chunk_size)):
+            stream.write(data)
+
+        stream.close()
+        p.terminate()
+
+
+async def _stream_voice(remote: AndroidTVRemote, stop_event: asyncio.Event) -> None:
+    """Record from the default audio input and stream as a voice command."""
+    chunk_size = 8 * 1024
+
+    if not remote.is_voice_enabled:
+        _LOGGER.warning("Voice feature is not enabled in the client or not supported on the device")
+        return
+
+    # Start a streaming voice session
+    # Context manager calls session.end() automatically
+    try:
+        async with await remote.start_voice() as session:
+            if not remote.is_voice_enabled:
+                _LOGGER.warning("Voice feature is not enabled in the client or not supported on the device")
+                return
+
+            def callback(in_data: bytes, frame_count: object, time_info: object, status: object) -> tuple[bytes | None, int]:
+                _LOGGER.debug("MIC callback: frame_count=%d, time_info=%s, status=%s", frame_count, time_info, status)
+                session.send_chunk(in_data)
+                return None, pyaudio.paContinue
+
+            _LOGGER.info("Voice session established, opening microphone...")
+            p = pyaudio.PyAudio()
+            stream = p.open(
+                format=VOICE_FORMAT,
+                channels=VOICE_CHANNELS,
+                rate=VOICE_RATE,
+                input=True,
+                frames_per_buffer=chunk_size,
+                stream_callback=callback,
+            )
+
+            _LOGGER.info("Recording started, sending data to Android TV...")
+            start = time.time()
+
+            # Use run_in_executor to check stream status without blocking
+            loop = asyncio.get_event_loop()
+            # Wait until timeout, stop_event is set, or stream becomes inactive
+            while (time.time() - start) < VOICE_RECORD_SECONDS:
+                if stop_event.is_set():
+                    _LOGGER.debug("Recording stopped by external event")
+                    break
+
+                if not await loop.run_in_executor(None, stream.is_active):
+                    _LOGGER.debug("Recording stopped: stream became inactive")
+                    break
+
+                try:
+                    await asyncio.wait_for(stop_event.wait(), timeout=0.25)
+                    break
+                except asyncio.TimeoutError:
+                    pass
+
+        print("Voice data sent, closing microphone")
+
+        stream.close()
+        p.terminate()
+    except asyncio.TimeoutError as e:
+        print("Timeout: could not start voice session.", e)
 
 
 asyncio.run(_main(), debug=True)

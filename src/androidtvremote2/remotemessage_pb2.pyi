@@ -1863,9 +1863,14 @@ global___RemoteStart = RemoteStart
 class RemoteVoiceEnd(google.protobuf.message.Message):
     DESCRIPTOR: google.protobuf.descriptor.Descriptor
 
+    SESSION_ID_FIELD_NUMBER: builtins.int
+    session_id: builtins.int
     def __init__(
         self,
+        *,
+        session_id: builtins.int = ...,
     ) -> None: ...
+    def ClearField(self, field_name: typing.Literal["session_id", b"session_id"]) -> None: ...
 
 global___RemoteVoiceEnd = RemoteVoiceEnd
 
@@ -1873,9 +1878,20 @@ global___RemoteVoiceEnd = RemoteVoiceEnd
 class RemoteVoicePayload(google.protobuf.message.Message):
     DESCRIPTOR: google.protobuf.descriptor.Descriptor
 
+    SESSION_ID_FIELD_NUMBER: builtins.int
+    SAMPLES_FIELD_NUMBER: builtins.int
+    session_id: builtins.int
+    samples: builtins.bytes
+    """Audio configuration in RemoteVoiceBegin is unknown.
+    Default audio sample payload is a sequence of 16-bit PCM, 8 kHz, mono samples, split into 20 KB messages.
+    """
     def __init__(
         self,
+        *,
+        session_id: builtins.int = ...,
+        samples: builtins.bytes = ...,
     ) -> None: ...
+    def ClearField(self, field_name: typing.Literal["samples", b"samples", "session_id", b"session_id"]) -> None: ...
 
 global___RemoteVoicePayload = RemoteVoicePayload
 
@@ -1883,9 +1899,18 @@ global___RemoteVoicePayload = RemoteVoicePayload
 class RemoteVoiceBegin(google.protobuf.message.Message):
     DESCRIPTOR: google.protobuf.descriptor.Descriptor
 
+    SESSION_ID_FIELD_NUMBER: builtins.int
+    PACKAGE_NAME_FIELD_NUMBER: builtins.int
+    session_id: builtins.int
+    package_name: builtins.str
+    """Package name is sent from the Android device as a response to sending KEYCODE_SEARCH and not required when sending audio."""
     def __init__(
         self,
+        *,
+        session_id: builtins.int = ...,
+        package_name: builtins.str = ...,
     ) -> None: ...
+    def ClearField(self, field_name: typing.Literal["package_name", b"package_name", "session_id", b"session_id"]) -> None: ...
 
 global___RemoteVoiceBegin = RemoteVoiceBegin
 

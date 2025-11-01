@@ -15,8 +15,9 @@ from .certificate_generator import generate_selfsigned_cert
 from .const import LOGGER
 from .exceptions import CannotConnect, ConnectionClosed, InvalidAuth
 from .pairing import PairingProtocol
-from .remote import RemoteProtocol
+from .remote import VOICE_SESSION_TIMEOUT, RemoteProtocol
 from .remotemessage_pb2 import RemoteDirection
+from .voice_stream import VoiceStream
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -45,6 +46,7 @@ class AndroidTVRemote:
         pair_port: int = 6467,
         loop: asyncio.AbstractEventLoop | None = None,
         enable_ime: bool = True,
+        enable_voice: bool = False,
     ) -> None:
         """Initialize.
 
@@ -57,6 +59,7 @@ class AndroidTVRemote:
         :param loop: event loop. Used for connections and futures.
         :param enable_ime: Needed for getting current_app.
                Disable for devices that show 'Use keyboard on mobile device screen'.
+        :param enable_voice: Enable sending voice commands to the device.
         """
         self._client_name = client_name
         self._certfile = certfile
@@ -66,6 +69,7 @@ class AndroidTVRemote:
         self._pair_port = pair_port
         self._loop = loop or asyncio.get_running_loop()
         self._enable_ime = enable_ime
+        self._enable_voice = enable_voice
         self._transport: asyncio.Transport | None = None
         self._remote_message_protocol: RemoteProtocol | None = None
         self._pairing_message_protocol: PairingProtocol | None = None
@@ -124,6 +128,17 @@ class AndroidTVRemote:
         if not self._remote_message_protocol:
             return None
         return self._remote_message_protocol.volume_info
+
+    @property
+    def is_voice_enabled(self) -> bool | None:
+        """Whether voice commands are enabled on the Android TV.
+
+        Depends on the requested feature at AndroidTVRemote initialization and the supported
+        features of the device.
+        """
+        if not self._remote_message_protocol:
+            return None
+        return self._remote_message_protocol.is_voice_enabled
 
     def add_is_on_updated_callback(self, callback: Callable[[bool], None]) -> None:
         """Add a callback for when is_on is updated."""
@@ -217,6 +232,7 @@ class AndroidTVRemote:
                     self._on_volume_info_updated,
                     self._loop,
                     self._enable_ime,
+                    self._enable_voice,
                 ),
                 self.host,
                 self._api_port,
@@ -400,3 +416,21 @@ class AndroidTVRemote:
             raise ConnectionClosed("Called send_launch_app_command after disconnect")
         prefix = "" if urlparse(app_link_or_app_id).scheme else "market://launch?id="
         self._remote_message_protocol.send_launch_app_command(f"{prefix}{app_link_or_app_id}")
+
+    async def start_voice(self, timeout: float = VOICE_SESSION_TIMEOUT) -> VoiceStream:
+        """Start a streaming voice session.
+
+        A ``VoiceStream`` session wrapper is returned if the voice session can be established
+        within the given timeout. The session needs to be closed with ``end()`` (or through the
+        asynchronous context manager) before a new session is started.
+
+        :param timeout: optional timeout for session readiness. Defaults to 2 seconds.
+        :raises ConnectionClosed: if client is disconnected.
+        :raises asyncio.TimeoutError: if the device does not begin voice in time, or a voice
+                                      session is already in progress.
+        """
+        if not self._remote_message_protocol:
+            LOGGER.debug("Called start_voice after disconnect")
+            raise ConnectionClosed("Called start_voice after disconnect")
+        session_id = await self._remote_message_protocol.start_voice(timeout)
+        return VoiceStream(self._remote_message_protocol, session_id)

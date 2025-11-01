@@ -420,12 +420,14 @@ class AndroidTVRemote:
     async def start_voice(self, timeout: float = VOICE_SESSION_TIMEOUT) -> VoiceStream:
         """Start a streaming voice session.
 
-        A ``VoiceStream`` wrapper is returned if the voice session can be established within the
-        given timeout.
+        A ``VoiceStream`` session wrapper is returned if the voice session can be established
+        within the given timeout. The session needs to be closed with ``end()`` (or through the
+        asynchronous context manager) before a new session is started.
 
         :param timeout: optional timeout for session readiness. Defaults to 2 seconds.
         :raises ConnectionClosed: if client is disconnected.
-        :raises asyncio.TimeoutError: if the device does not begin voice in time.
+        :raises asyncio.TimeoutError: if the device does not begin voice in time, or a voice
+                                      session is already in progress.
         """
         if not self._remote_message_protocol:
             LOGGER.debug("Called start_voice after disconnect")

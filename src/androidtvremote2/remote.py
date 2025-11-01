@@ -115,6 +115,7 @@ class RemoteProtocol(ProtobufProtocol):
         self._loop = loop
         self._idle_disconnect_task: asyncio.Task[None] | None = None
         self._reset_idle_disconnect_task()
+        self._voice_lock = asyncio.Lock()
         self._on_voice_begin: asyncio.Future[int] | None = None
 
     @property
@@ -196,11 +197,17 @@ class RemoteProtocol(ProtobufProtocol):
 
         :param timeout: Optional timeout in seconds for session readiness. Defaults to 2 seconds.
         :raises ConnectionClosed: If the connection is lost.
-        :raises asyncio.TimeoutError: If the operation times out.
+        :raises asyncio.TimeoutError: If the operation times out or a voice session is already in
+                                      progress.
         :return: The voice session id, which must be used in later calls to ``send_voice_chunk``.
         """
         if self.transport is None or self.transport.is_closing():
             raise ConnectionClosed("Connection has been lost")
+
+        if self._voice_lock.locked():
+            raise asyncio.TimeoutError("Voice session already in progress")
+
+        await self._voice_lock.acquire()
 
         self._on_voice_begin = self._loop.create_future()
         try:
@@ -216,6 +223,8 @@ class RemoteProtocol(ProtobufProtocol):
         except:
             self._on_voice_begin = None
             raise
+        finally:
+            self._voice_lock.release()
 
     def send_voice_chunk(self, chunk: bytes, session_id: int) -> None:
         """Send a chunk of PCM audio for the active voice session.
@@ -355,7 +364,7 @@ class RemoteProtocol(ProtobufProtocol):
         # Check if future completed successfully
         if future.done():
             if future.exception():
-                raise ConnectionClosed(future.exception())
+                raise ConnectionClosed("Waiting for future failed") from future.exception()
             return future.result()
 
         raise ConnectionClosed("Connection has been lost")

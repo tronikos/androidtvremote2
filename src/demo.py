@@ -1,4 +1,4 @@
-# ruff: noqa: T201, PLR0912, PLR0915
+# ruff: noqa: T201, PLR0912, PLR0915, ASYNC240, ASYNC250
 """Demo usage of AndroidTVRemote."""
 
 import argparse

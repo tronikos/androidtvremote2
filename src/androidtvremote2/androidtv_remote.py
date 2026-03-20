@@ -3,12 +3,12 @@
 from __future__ import annotations
 
 import asyncio
-import os
 import ssl
 from typing import TYPE_CHECKING
 from urllib.parse import urlparse
 
 import aiofiles
+from aiofiles import os as aos
 from cryptography import x509
 
 from .certificate_generator import generate_selfsigned_cert
@@ -189,7 +189,7 @@ class AndroidTVRemote:
 
         :returns: True if a new certificate was generated.
         """
-        if os.path.isfile(self._certfile) and os.path.isfile(self._keyfile):
+        if await aos.path.isfile(self._certfile) and await aos.path.isfile(self._keyfile):
             return False
         cert_pem, key_pem = generate_selfsigned_cert(self._client_name)
         async with aiofiles.open(self._certfile, "w", encoding="utf-8") as out:

@@ -103,12 +103,15 @@ async def _bind_keyboard(remote: AndroidTVRemote) -> None:
         elif key.char == "y":
             remote.send_launch_app_command("https://www.youtube.com")
         elif key.char == "n":
-            remote.send_launch_app_command("com.netflix.ninja")
+            remote.send_launch_app_command("netflix://")
         elif key.char == "d":
-            remote.send_launch_app_command("com.disney.disneyplus")
+            remote.send_launch_app_command("https://www.disneyplus.com")
         elif key.char == "a":
-            remote.send_launch_app_command("com.amazon.amazonvideo.livingroom")
+            remote.send_launch_app_command("https://app.primevideo.com")
         elif key.char == "k":
+            # Launching by app ID (e.g. "org.xbmc.kodi") is currently unreliable
+            # for many apps due to a Google Play Store change. Use a deep link
+            # instead when the app has one.
             remote.send_launch_app_command("org.xbmc.kodi")
         elif key.char == "t":
             remote.send_text("Hello World!")

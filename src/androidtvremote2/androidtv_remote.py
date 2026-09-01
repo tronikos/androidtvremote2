@@ -25,6 +25,31 @@ if TYPE_CHECKING:
     from .model import DeviceInfo, VolumeInfo
 
 
+def _parse_name_and_mac(server_cert: x509.Certificate) -> tuple[str, str]:
+    """Extract the name and MAC address from the subject of an Android TV certificate.
+
+    NVIDIA SHIELD example:
+    CN=atvremote/darcy/darcy/SHIELD Android TV/XX:XX:XX:XX:XX:XX
+    Nexus Player example:
+    dnQualifier=fugu/fugu/Nexus Player/CN=atvremote/XX:XX:XX:XX:XX:XX
+    """
+    common_name = server_cert.subject.get_attributes_for_oid(x509.OID_COMMON_NAME)
+    common_name_str = str(common_name[0].value) if common_name else ""
+    dn_qualifier = server_cert.subject.get_attributes_for_oid(x509.OID_DN_QUALIFIER)
+    dn_qualifier_str = str(dn_qualifier[0].value) if dn_qualifier else ""
+    common_name_parts = common_name_str.split("/")
+    dn_qualifier_parts = dn_qualifier_str.split("/")
+    if dn_qualifier_str:
+        name = dn_qualifier_parts[-1]
+    elif len(common_name_parts) > 1:
+        name = common_name_parts[-2]
+    else:
+        # Unexpected subject, e.g. a common name without any "/" separator.
+        name = common_name_str
+    mac = common_name_parts[-1]
+    return name, mac
+
+
 def _load_cert_chain(certfile: str, keyfile: str) -> ssl.SSLContext:
     ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
     ssl_context.check_hostname = False
@@ -196,6 +221,8 @@ class AndroidTVRemote:
             await out.write(cert_pem.decode("utf-8"))
         async with aiofiles.open(self._keyfile, "w", encoding="utf-8") as out:
             await out.write(key_pem.decode("utf-8"))
+        # The cached context, if any, was loaded from the previous certificate.
+        self._ssl_context = None
         return True
 
     async def _create_ssl_context(self) -> ssl.SSLContext:
@@ -317,20 +344,11 @@ class AndroidTVRemote:
             raise CannotConnect from exc
         server_cert_bytes = writer.transport.get_extra_info("ssl_object").getpeercert(True)
         writer.close()
-        server_cert = x509.load_der_x509_certificate(server_cert_bytes)
-        # NVIDIA SHIELD example:
-        # CN=atvremote/darcy/darcy/SHIELD Android TV/XX:XX:XX:XX:XX:XX
-        # Nexus Player example:
-        # dnQualifier=fugu/fugu/Nexus Player/CN=atvremote/XX:XX:XX:XX:XX:XX
-        common_name = server_cert.subject.get_attributes_for_oid(x509.OID_COMMON_NAME)
-        common_name_str = str(common_name[0].value) if common_name else ""
-        dn_qualifier = server_cert.subject.get_attributes_for_oid(x509.OID_DN_QUALIFIER)
-        dn_qualifier_str = str(dn_qualifier[0].value) if dn_qualifier else ""
-        common_name_parts = common_name_str.split("/")
-        dn_qualifier_parts = dn_qualifier_str.split("/")
-        name = dn_qualifier_parts[-1] if dn_qualifier_str else common_name_parts[-2]
-        mac = common_name_parts[-1]
-        return name, mac
+        try:
+            await writer.wait_closed()
+        except OSError as exc:
+            LOGGER.debug("Error closing connection to %s:%s. %s", self.host, self._pair_port, exc)
+        return _parse_name_and_mac(x509.load_der_x509_certificate(server_cert_bytes))
 
     async def async_start_pairing(self) -> None:
         """Start the pairing process.

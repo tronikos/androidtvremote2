@@ -73,7 +73,7 @@ async def _bind_keyboard(remote: AndroidTVRemote) -> None:
 
     def transmit_keys() -> asyncio.Queue[keyboard.Key | keyboard.KeyCode | None]:
         queue: asyncio.Queue[keyboard.Key | keyboard.KeyCode | None] = asyncio.Queue()
-        loop = asyncio.get_event_loop()
+        loop = asyncio.get_running_loop()
 
         def on_press(key: keyboard.Key | keyboard.KeyCode | None) -> None:
             loop.call_soon_threadsafe(queue.put_nowait, key)
@@ -116,7 +116,7 @@ async def _bind_keyboard(remote: AndroidTVRemote) -> None:
             remote.send_launch_app_command("org.xbmc.kodi")
         elif key.char == "t":
             remote.send_text("Hello World!")
-        if key.char == "r":
+        elif key.char == "r":
             _record_voice_command(VOICE_FILE)
         elif key.char == "p":
             _play_voice_command(VOICE_FILE)
@@ -127,7 +127,7 @@ async def _bind_keyboard(remote: AndroidTVRemote) -> None:
                 continue
             print("Starting voice recording. Press v again to stop. Auto stop after " + str(VOICE_STREAM_SECONDS) + "s")
             voice_stop_event.clear()
-            voice_task = asyncio.get_event_loop().create_task(_stream_voice(remote, voice_stop_event))
+            voice_task = asyncio.get_running_loop().create_task(_stream_voice(remote, voice_stop_event))
         elif key.char == "w":
             await _send_voice(VOICE_FILE, remote)
 
@@ -386,9 +386,9 @@ async def _stream_voice(remote: AndroidTVRemote, stop_event: asyncio.Event) -> N
             start = time.time()
 
             # Use run_in_executor to check stream status without blocking
-            loop = asyncio.get_event_loop()
+            loop = asyncio.get_running_loop()
             # Wait until timeout, stop_event is set, or stream becomes inactive
-            while (time.time() - start) < VOICE_RECORD_SECONDS:
+            while (time.time() - start) < VOICE_STREAM_SECONDS:
                 if stop_event.is_set():
                     _LOGGER.debug("Recording stopped by external event")
                     break

@@ -21,6 +21,10 @@ from .const import LOGGER
 from .exceptions import ConnectionClosed, InvalidAuth
 from .polo_pb2 import Options, OuterMessage
 
+# Timeout in seconds to wait for a response from the Android TV. Every step of the
+# pairing handshake is answered by the device itself, so this doesn't wait on a human.
+PAIRING_TIMEOUT = 10.0
+
 
 def _create_message() -> OuterMessage:
     """Create an OuterMessage with default values."""
@@ -69,7 +73,7 @@ class PairingProtocol(ProtobufProtocol):
     async def async_start_pairing(self) -> None:
         """Start the pairing process.
 
-        :raises ConnectionClosed: if connection was lost.
+        :raises ConnectionClosed: if connection was lost or the device didn't respond in time.
         """
         self._raise_if_not_connected()
         msg = _create_message()
@@ -86,7 +90,7 @@ class PairingProtocol(ProtobufProtocol):
         """Finish the pairing process.
 
         :param pairing_code: pairing code shown on the Android TV.
-        :raises ConnectionClosed: if connection was lost.
+        :raises ConnectionClosed: if connection was lost or the device didn't respond in time.
         :raises InvalidAuth: if pairing was unsuccessful.
         """
         self._raise_if_not_connected()
@@ -129,9 +133,18 @@ class PairingProtocol(ProtobufProtocol):
         finally:
             self._on_pairing_finished = None
 
-    async def _async_wait_for_future_or_con_lost(self, future: asyncio.Future[Any]) -> None:
-        """Wait for future to finish or connection to be lost."""
-        await asyncio.wait((self.on_con_lost, future), return_when=asyncio.FIRST_COMPLETED)
+    async def _async_wait_for_future_or_con_lost(self, future: asyncio.Future[Any], timeout: float = PAIRING_TIMEOUT) -> None:
+        """Wait for future to finish, connection to be lost, or timeout to elapse.
+
+        :raises ConnectionClosed: if the connection was lost or the device stopped responding.
+        """
+        done, _pending = await asyncio.wait((self.on_con_lost, future), timeout=timeout, return_when=asyncio.FIRST_COMPLETED)
+        if not done:
+            LOGGER.debug("Timeout after %s seconds waiting for a response while pairing", timeout)
+            future.cancel()
+            if self.transport:
+                self.transport.close()
+            raise ConnectionClosed(f"No response from the Android TV within {timeout} seconds")
         if future.done():
             if future.exception():
                 raise ConnectionClosed(future.exception())
@@ -177,11 +190,11 @@ class PairingProtocol(ProtobufProtocol):
             new_msg.configuration.encoding.type = Options.Encoding.ENCODING_TYPE_HEXADECIMAL
             new_msg.configuration.encoding.symbol_length = 6
         elif msg.HasField("configuration_ack"):
-            if self._on_pairing_started:
+            if self._on_pairing_started and not self._on_pairing_started.done():
                 self._on_pairing_started.set_result(True)
             return
         elif msg.HasField("secret_ack"):
-            if self._on_pairing_finished:
+            if self._on_pairing_finished and not self._on_pairing_finished.done():
                 self._on_pairing_finished.set_result(True)
             return
         else:

@@ -297,8 +297,7 @@ class AndroidTVRemote:
         if self._reconnect_task:
             self._reconnect_task.cancel()
         if self._remote_message_protocol:
-            if self._remote_message_protocol.transport:
-                self._remote_message_protocol.transport.close()
+            self._remote_message_protocol.close()
             self._remote_message_protocol = None
         if self._pairing_message_protocol:
             if self._pairing_message_protocol.transport:

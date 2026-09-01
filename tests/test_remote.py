@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
 from typing import TYPE_CHECKING
 
@@ -304,3 +305,94 @@ async def test_send_launch_app_command(remote_factory: Callable[..., RemoteHarne
 
     (sent,) = harness.sent()
     assert sent.remote_app_link_launch_request.app_link == "https://www.youtube.com"
+
+
+async def yield_to_loop(times: int = 3) -> None:
+    """Let pending callbacks run without advancing the clock meaningfully."""
+    for _ in range(times):
+        await asyncio.sleep(0)
+
+
+# --- idle disconnect ----------------------------------------------------------------
+
+
+async def test_idle_disconnect_task_is_replaced_on_activity(
+    remote_factory: Callable[..., RemoteHarness],
+) -> None:
+    """Each message resets the idle timer, cancelling the previous task."""
+    harness = remote_factory()
+    first = harness.protocol._idle_disconnect_task
+    assert first is not None
+
+    harness.protocol.send_key_command("POWER")
+    second = harness.protocol._idle_disconnect_task
+    await yield_to_loop()
+
+    assert second is not None
+    assert second is not first
+    assert first.cancelled()
+    assert not second.done()
+
+
+async def test_connection_lost_cancels_the_idle_disconnect_task(
+    remote_factory: Callable[..., RemoteHarness],
+) -> None:
+    """A lost connection doesn't leave a task pending for another 16 seconds.
+
+    Regression test: the task used to outlive the connection, keeping the protocol
+    alive and logging 'Task was destroyed but it is pending' at shutdown.
+    """
+    harness = remote_factory()
+    task = harness.protocol._idle_disconnect_task
+    assert task is not None
+
+    harness.protocol.connection_lost(None)
+    await yield_to_loop()
+
+    assert harness.protocol._idle_disconnect_task is None
+    assert task.cancelled()
+
+
+async def test_close_cancels_the_idle_disconnect_task(remote_factory: Callable[..., RemoteHarness]) -> None:
+    """close() stops the timer even if connection_lost hasn't run yet."""
+    harness = remote_factory()
+    task = harness.protocol._idle_disconnect_task
+    assert task is not None
+
+    harness.protocol.close()
+    await yield_to_loop()
+
+    assert harness.protocol._idle_disconnect_task is None
+    assert task.cancelled()
+    assert harness.transport.is_closing()
+
+
+async def test_no_new_idle_task_once_the_transport_is_closing(
+    remote_factory: Callable[..., RemoteHarness],
+) -> None:
+    """Sending after close doesn't resurrect the idle disconnect task."""
+    harness = remote_factory()
+    harness.protocol.close()
+
+    harness.protocol.send_key_command("POWER")
+
+    assert harness.protocol._idle_disconnect_task is None
+
+
+async def test_idle_disconnect_closes_the_connection(
+    remote_factory: Callable[..., RemoteHarness], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """After the idle timeout the connection is closed and reported as lost."""
+    harness = remote_factory()
+    slept: list[float] = []
+
+    async def fake_sleep(delay: float) -> None:
+        slept.append(delay)
+
+    # remote.py calls asyncio.sleep directly, so patching it here reaches that call.
+    monkeypatch.setattr(asyncio, "sleep", fake_sleep)
+    await harness.protocol._async_idle_disconnect()
+
+    assert slept == [16]
+    assert harness.transport.is_closing()
+    assert isinstance(harness.protocol.on_con_lost.result(), Exception)

@@ -117,7 +117,8 @@ def remote_factory() -> Iterator[Callable[..., RemoteHarness]]:
     yield _factory
 
     for harness in harnesses:
-        harness.transport.close()
+        # Don't leak the idle disconnect task into the next test.
+        harness.protocol.close()
 
 
 @pytest.fixture(scope="session")

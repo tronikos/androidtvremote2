@@ -118,6 +118,17 @@ class RemoteProtocol(ProtobufProtocol):
         self._voice_lock = asyncio.Lock()
         self._on_voice_begin: asyncio.Future[int] | None = None
 
+    def connection_lost(self, exc: Exception | None) -> None:
+        """Cancel the idle disconnect task."""
+        self._cancel_idle_disconnect_task()
+        super().connection_lost(exc)
+
+    def close(self) -> None:
+        """Close the connection and stop the idle disconnect task."""
+        self._cancel_idle_disconnect_task()
+        if self.transport and not self.transport.is_closing():
+            self.transport.close()
+
     @property
     def is_voice_enabled(self) -> bool:
         """Voice commands enabled.
@@ -330,9 +341,16 @@ class RemoteProtocol(ProtobufProtocol):
         if new_msg != RemoteMessage():
             self._send_message(new_msg, log_send)
 
-    def _reset_idle_disconnect_task(self) -> None:
+    def _cancel_idle_disconnect_task(self) -> None:
         if self._idle_disconnect_task is not None:
             self._idle_disconnect_task.cancel()
+            self._idle_disconnect_task = None
+
+    def _reset_idle_disconnect_task(self) -> None:
+        self._cancel_idle_disconnect_task()
+        if self.transport is not None and self.transport.is_closing():
+            # Don't keep a task alive for a connection that is going away.
+            return
         self._idle_disconnect_task = self._loop.create_task(self._async_idle_disconnect())
 
     async def _async_idle_disconnect(self) -> None:

@@ -413,4 +413,5 @@ async def _stream_voice(remote: AndroidTVRemote, stop_event: asyncio.Event) -> N
         print("Timeout: could not start voice session.", e)
 
 
-asyncio.run(_main(), debug=True)
+if __name__ == "__main__":
+    asyncio.run(_main(), debug=True)

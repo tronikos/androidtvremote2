@@ -34,6 +34,11 @@ demo = [
 requires = ["setuptools"]
 build-backend = "setuptools.build_meta"
 
+# Explicit discovery. Without it setuptools also picks up src/demo.py and installs it
+# as a top level "demo" module.
+[tool.setuptools.packages.find]
+where = ["src"]
+
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"

@@ -6,7 +6,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from cryptography import x509
 from cryptography.hazmat.backends import default_backend
@@ -29,7 +29,7 @@ def generate_selfsigned_cert(hostname: str) -> tuple[bytes, bytes]:
     alt_names = [x509.DNSName(hostname)]
     san = x509.SubjectAlternativeName(alt_names)
     basic_constraints = x509.BasicConstraints(ca=True, path_length=0)
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     cert = (
         x509.CertificateBuilder()
         .subject_name(name)

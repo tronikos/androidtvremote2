@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, cast
 from google.protobuf import text_format
 from google.protobuf.internal.decoder import _DecodeVarint  # type: ignore[attr-defined]
 from google.protobuf.internal.encoder import _EncodeVarint  # type: ignore[attr-defined]
+from google.protobuf.message import DecodeError
 
 from .const import LOGGER
 
@@ -25,8 +26,7 @@ class ProtobufProtocol(asyncio.Protocol):
         """
         self.on_con_lost = on_con_lost
         self.transport: asyncio.Transport | None = None
-        self._raw_msg_len = -1
-        self._raw_msg = b""
+        self._buffer = bytearray()
 
     def connection_made(self, transport: asyncio.BaseTransport) -> None:
         """Store transport when a connection is made."""
@@ -40,27 +40,37 @@ class ProtobufProtocol(asyncio.Protocol):
             self.on_con_lost.set_result(exc)
 
     def data_received(self, data: bytes) -> None:
-        """Receive data until a full protobuf is received and pass it to _handle_message."""
+        """Buffer data and pass every complete protobuf message to _handle_message.
+
+        Messages are length delimited by a varint. A single call may deliver a partial
+        message, several messages, or anything in between, and the split can happen
+        anywhere, including in the middle of the varint.
+        """
         if not data:
             LOGGER.debug("No data received")
             return
-        if self._raw_msg_len < 0:
-            self._raw_msg_len, pos = _DecodeVarint(data, 0)
-            pos_end = pos + self._raw_msg_len
-            self._raw_msg += data[pos:pos_end]
-            remaining_data = data[pos_end:]
-        else:
-            pos_end = self._raw_msg_len - len(self._raw_msg)
-            self._raw_msg += data[:pos_end]
-            remaining_data = data[pos_end:]
-        if self._raw_msg_len == len(self._raw_msg):
-            raw_msg = self._raw_msg
-            self._raw_msg_len = -1
-            self._raw_msg = b""
+        self._buffer += data
+        while self._buffer:
+            try:
+                msg_len, pos = _DecodeVarint(self._buffer, 0)
+            except IndexError:
+                # The varint with the message length was not fully received yet.
+                return
+            except DecodeError as exc:
+                # The stream cannot be resynchronized after a corrupt length.
+                LOGGER.debug("Couldn't decode the message length. %s", exc)
+                self._buffer.clear()
+                if self.transport and not self.transport.is_closing():
+                    self.transport.close()
+                return
+            pos_end = pos + msg_len
+            if len(self._buffer) < pos_end:
+                # The message was not fully received yet.
+                return
+            raw_msg = bytes(self._buffer[pos:pos_end])
+            del self._buffer[:pos_end]
             # LOGGER.debug("Received: %s", raw_msg)
             self._handle_message(raw_msg)
-            if remaining_data:
-                self.data_received(remaining_data)
 
     def _handle_message(self, raw_msg: bytes) -> None:
         """Handle a message from the server. Message needs to be parsed to the appropriate protobuf."""

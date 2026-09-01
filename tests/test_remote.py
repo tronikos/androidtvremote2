@@ -179,6 +179,21 @@ async def test_ime_batch_edit_updates_the_counters_used_by_send_text(
     assert sent.remote_ime_batch_edit.field_counter == 4
 
 
+async def test_remote_error_is_logged_as_an_error(
+    remote_factory: Callable[..., RemoteHarness], caplog: pytest.LogCaptureFixture
+) -> None:
+    """An error reported by the device is surfaced, not swallowed as 'unhandled'."""
+    harness = remote_factory()
+    msg = RemoteMessage()
+    msg.remote_error.value = True
+    with caplog.at_level(logging.DEBUG, logger="androidtvremote2"):
+        harness.receive(msg)
+
+    assert "Received an error from the device" in caplog.text
+    assert "Unhandled" not in caplog.text
+    assert harness.sent() == []
+
+
 async def test_unhandled_message_is_logged_and_ignored(
     remote_factory: Callable[..., RemoteHarness], caplog: pytest.LogCaptureFixture
 ) -> None:
@@ -213,13 +228,15 @@ async def test_undecodable_message_does_not_raise(
         (26, 26),
         ("POWER", RemoteKeyCode.KEYCODE_POWER),
         ("KEYCODE_POWER", RemoteKeyCode.KEYCODE_POWER),
+        ("power", RemoteKeyCode.KEYCODE_POWER),
+        ("keycode_power", RemoteKeyCode.KEYCODE_POWER),
         ("DPAD_UP", RemoteKeyCode.KEYCODE_DPAD_UP),
     ],
 )
 async def test_send_key_command_accepts_ints_and_names(
     remote_factory: Callable[..., RemoteHarness], key_code: int | str, expected: int
 ) -> None:
-    """Key codes can be given as ints, bare names or fully qualified names."""
+    """Key codes can be ints, bare names or fully qualified names, in any case."""
     harness = remote_factory()
     harness.protocol.send_key_command(key_code)
 
@@ -228,9 +245,9 @@ async def test_send_key_command_accepts_ints_and_names(
     assert sent.remote_key_inject.direction == RemoteDirection.SHORT
 
 
-@pytest.mark.parametrize("direction", ["START_LONG", RemoteDirection.START_LONG])
+@pytest.mark.parametrize("direction", ["START_LONG", "start_long", RemoteDirection.START_LONG])
 async def test_send_key_command_accepts_directions(remote_factory: Callable[..., RemoteHarness], direction: int | str) -> None:
-    """Directions can be given as ints or as names."""
+    """Directions can be given as ints or as case insensitive names."""
     harness = remote_factory()
     harness.protocol.send_key_command("POWER", direction)
 

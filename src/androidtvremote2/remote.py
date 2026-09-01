@@ -134,7 +134,7 @@ class RemoteProtocol(ProtobufProtocol):
 
         :param key_code: int (e.g. 26) or str (e.g. "KEYCODE_POWER" or just "POWER") from the enum
                          RemoteKeyCode in remotemessage.proto or str prefixed with "text:" to pass
-                         to send_text.
+                         to send_text. Key codes and directions are case insensitive.
         :param direction: "SHORT" (default) or "START_LONG" or "END_LONG".
         :raises ValueError: if key_code in str or direction isn't known.
         """
@@ -143,11 +143,12 @@ class RemoteProtocol(ProtobufProtocol):
         if isinstance(key_code, str):
             if key_code.lower().startswith(TEXT_PREFIX):
                 return self.send_text(key_code[len(TEXT_PREFIX) :])
+            key_code = key_code.upper()
             if not key_code.startswith(KEYCODE_PREFIX):
                 key_code = KEYCODE_PREFIX + key_code
             key_code = RemoteKeyCode.Value(key_code)
         if isinstance(direction, str):
-            direction = RemoteDirection.Value(direction)
+            direction = RemoteDirection.Value(direction.upper())
         msg.remote_key_inject.key_code = key_code  # type: ignore[assignment]
         msg.remote_key_inject.direction = direction  # type: ignore[assignment]
         self._send_message(msg)
@@ -156,7 +157,7 @@ class RemoteProtocol(ProtobufProtocol):
     def send_text(self, text: str) -> None:
         """Send a text string to Android TV via the input method.
 
-        The text length is used for both `start` and `end` in the RemoteImeObject.
+        The text length minus one is used for both `start` and `end` in the RemoteImeObject.
         The `ime_counter` and `ime_field_counter` values are taken from self (batch_edit_info response),
         which is populated when a message with a remote_ime_batch_edit field is received.
 
@@ -313,6 +314,11 @@ class RemoteProtocol(ProtobufProtocol):
         elif msg.HasField("remote_ping_request"):
             new_msg.remote_ping_response.val1 = msg.remote_ping_request.val1
             log_send = LOG_PING_REQUESTS
+        elif msg.HasField("remote_error"):
+            LOGGER.error(
+                "Received an error from the device: %s",
+                text_format.MessageToString(msg.remote_error, as_one_line=True),
+            )
         elif msg.HasField("remote_voice_begin"):
             if self._on_voice_begin and not self._on_voice_begin.done():
                 self._on_voice_begin.set_result(msg.remote_voice_begin.session_id)

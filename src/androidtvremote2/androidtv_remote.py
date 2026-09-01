@@ -425,8 +425,8 @@ class AndroidTVRemote:
 
         :param timeout: optional timeout for session readiness. Defaults to 2 seconds.
         :raises ConnectionClosed: if client is disconnected.
-        :raises asyncio.TimeoutError: if the device does not begin voice in time, or a voice
-                                      session is already in progress.
+        :raises VoiceSessionInProgress: if a voice session is already in progress.
+        :raises asyncio.TimeoutError: if the device does not begin voice in time.
         """
         if not self._remote_message_protocol:
             LOGGER.debug("Called start_voice after disconnect")

@@ -11,3 +11,7 @@ class ConnectionClosed(Exception):
 
 class InvalidAuth(Exception):
     """Error to indicate there is invalid auth."""
+
+
+class VoiceSessionInProgress(Exception):
+    """Error to indicate a voice session is already in progress."""

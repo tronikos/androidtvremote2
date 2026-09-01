@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING
 
 import pytest
 
-from androidtvremote2.exceptions import ConnectionClosed
+from androidtvremote2.exceptions import ConnectionClosed, VoiceSessionInProgress
 from androidtvremote2.remote import (
     VOICE_CHUNK_MIN_SIZE,
     VOICE_CHUNK_SIZE,
@@ -318,6 +318,103 @@ async def yield_to_loop(times: int = 3) -> None:
         await asyncio.sleep(0)
 
 
+# --- voice --------------------------------------------------------------------------
+
+
+async def begin_voice(harness: RemoteHarness, session_id: int = 77, timeout: float = 1.0) -> int:
+    """Start a voice session, answering remote_voice_begin as the device would."""
+    task = asyncio.ensure_future(harness.protocol.start_voice(timeout))
+    await yield_to_loop()
+    msg = RemoteMessage()
+    msg.remote_voice_begin.session_id = session_id
+    harness.receive(msg)
+    return await task
+
+
+async def test_start_voice_sends_search_then_voice_begin(remote_factory: Callable[..., RemoteHarness]) -> None:
+    """start_voice sends KEYCODE_SEARCH and echoes remote_voice_begin back."""
+    harness = remote_factory()
+    session_id = await begin_voice(harness)
+
+    assert session_id == 77
+    sent = harness.sent()
+    assert sent[0].remote_key_inject.key_code == RemoteKeyCode.KEYCODE_SEARCH
+    assert sent[-1].remote_voice_begin.session_id == 77
+
+
+async def test_start_voice_times_out_without_a_response(remote_factory: Callable[..., RemoteHarness]) -> None:
+    """A device that never begins voice produces a TimeoutError."""
+    harness = remote_factory()
+    with pytest.raises(asyncio.TimeoutError):
+        await harness.protocol.start_voice(timeout=0.01)
+
+    # The failed attempt must not leave a session behind.
+    assert harness.protocol._voice_session_id is None
+    session_id = await begin_voice(harness)
+    assert session_id == 77
+
+
+async def test_start_voice_requires_a_connection(remote_factory: Callable[..., RemoteHarness]) -> None:
+    """Starting a session on a closed connection raises ConnectionClosed."""
+    harness = remote_factory()
+    harness.transport.close()
+    with pytest.raises(ConnectionClosed):
+        await harness.protocol.start_voice()
+
+
+async def test_start_voice_rejects_a_second_session(remote_factory: Callable[..., RemoteHarness]) -> None:
+    """Only one voice session can be open at a time, until it is ended.
+
+    Regression test: the guard used to only cover the setup of the session, so a
+    second sequential start_voice() silently opened a second session.
+    """
+    harness = remote_factory()
+    await begin_voice(harness)
+
+    with pytest.raises(VoiceSessionInProgress):
+        await harness.protocol.start_voice()
+
+    harness.protocol.end_voice(77)
+    assert await begin_voice(harness, session_id=78) == 78
+
+
+async def test_start_voice_rejects_a_concurrent_session(remote_factory: Callable[..., RemoteHarness]) -> None:
+    """A second start_voice while the first is still awaiting is rejected too."""
+    harness = remote_factory()
+    task = asyncio.ensure_future(harness.protocol.start_voice(timeout=1.0))
+    await yield_to_loop()
+
+    with pytest.raises(VoiceSessionInProgress):
+        await harness.protocol.start_voice()
+
+    msg = RemoteMessage()
+    msg.remote_voice_begin.session_id = 5
+    harness.receive(msg)
+    assert await task == 5
+
+
+async def test_losing_the_connection_clears_the_voice_session(
+    remote_factory: Callable[..., RemoteHarness],
+) -> None:
+    """A dropped connection doesn't leave a session id blocking future sessions."""
+    harness = remote_factory()
+    await begin_voice(harness)
+    harness.protocol.connection_lost(None)
+
+    assert harness.protocol._voice_session_id is None
+
+
+async def test_end_voice_sends_the_end_message(remote_factory: Callable[..., RemoteHarness]) -> None:
+    """end_voice tells the device the session is over."""
+    harness = remote_factory()
+    await begin_voice(harness)
+    harness.clear()
+
+    harness.protocol.end_voice(77)
+    (sent,) = harness.sent()
+    assert sent.remote_voice_end.session_id == 77
+
+
 @pytest.mark.parametrize(
     ("size", "expected"),
     [
@@ -362,6 +459,19 @@ async def test_send_voice_chunk_requires_a_connection(remote_factory: Callable[.
     harness.transport.close()
     with pytest.raises(ConnectionClosed):
         harness.protocol.send_voice_chunk(b"a" * VOICE_CHUNK_MIN_SIZE, 77)
+
+
+async def test_unexpected_voice_begin_is_ignored(
+    remote_factory: Callable[..., RemoteHarness], caplog: pytest.LogCaptureFixture
+) -> None:
+    """A remote_voice_begin nobody asked for doesn't raise."""
+    harness = remote_factory()
+    msg = RemoteMessage()
+    msg.remote_voice_begin.session_id = 3
+    with caplog.at_level(logging.DEBUG, logger="androidtvremote2"):
+        harness.receive(msg)
+
+    assert "no client request available" in caplog.text
 
 
 # --- idle disconnect ----------------------------------------------------------------

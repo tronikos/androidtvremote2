@@ -20,6 +20,7 @@ from androidtvremote2 import (
     CannotConnect,
     ConnectionClosed,
     InvalidAuth,
+    VoiceSessionInProgress,
     VolumeInfo,
 )
 
@@ -297,6 +298,8 @@ async def _send_voice(wav_file: str, remote: AndroidTVRemote) -> None:
         _LOGGER.exception("WAV file not found")
     except wave.Error:
         _LOGGER.exception("Invalid/unsupported WAV file %s", wav_file)
+    except VoiceSessionInProgress:
+        _LOGGER.warning("A voice session is already in progress")
     except asyncio.TimeoutError:
         _LOGGER.warning("Timeout: could not start voice session")
     except Exception:
@@ -404,6 +407,8 @@ async def _stream_voice(remote: AndroidTVRemote, stop_event: asyncio.Event) -> N
 
         stream.close()
         p.terminate()
+    except VoiceSessionInProgress:
+        print("A voice session is already in progress.")
     except asyncio.TimeoutError as e:
         print("Timeout: could not start voice session.", e)
 

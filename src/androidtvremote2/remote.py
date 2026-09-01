@@ -15,7 +15,7 @@ from google.protobuf.message import DecodeError
 
 from .base import ProtobufProtocol
 from .const import LOGGER
-from .exceptions import ConnectionClosed
+from .exceptions import ConnectionClosed, VoiceSessionInProgress
 from .remotemessage_pb2 import (
     RemoteDirection,
     RemoteEditInfo,
@@ -115,12 +115,14 @@ class RemoteProtocol(ProtobufProtocol):
         self._loop = loop
         self._idle_disconnect_task: asyncio.Task[None] | None = None
         self._reset_idle_disconnect_task()
-        self._voice_lock = asyncio.Lock()
+        self._voice_starting = False
+        self._voice_session_id: int | None = None
         self._on_voice_begin: asyncio.Future[int] | None = None
 
     def connection_lost(self, exc: Exception | None) -> None:
-        """Cancel the idle disconnect task."""
+        """Cancel the idle disconnect task and drop any voice session."""
         self._cancel_idle_disconnect_task()
+        self._voice_session_id = None
         super().connection_lost(exc)
 
     def close(self) -> None:
@@ -207,20 +209,22 @@ class RemoteProtocol(ProtobufProtocol):
         initial ``remote_voice_begin`` message back to the device, as required by the
         protocol, so the caller can start streaming audio chunks.
 
+        The session stays open until :meth:`end_voice` is called for it, and only one
+        session can be open at a time.
+
         :param timeout: Optional timeout in seconds for session readiness. Defaults to 2 seconds.
         :raises ConnectionClosed: If the connection is lost.
-        :raises asyncio.TimeoutError: If the operation times out or a voice session is already in
-                                      progress.
+        :raises VoiceSessionInProgress: If a voice session is already in progress.
+        :raises asyncio.TimeoutError: If the operation times out.
         :return: The voice session id, which must be used in later calls to ``send_voice_chunk``.
         """
         if self.transport is None or self.transport.is_closing():
             raise ConnectionClosed("Connection has been lost")
 
-        if self._voice_lock.locked():
-            raise asyncio.TimeoutError("Voice session already in progress")
+        if self._voice_starting or self._voice_session_id is not None:
+            raise VoiceSessionInProgress("Voice session already in progress")
 
-        await self._voice_lock.acquire()
-
+        self._voice_starting = True
         self._on_voice_begin = self._loop.create_future()
         try:
             self.send_key_command(RemoteKeyCode.KEYCODE_SEARCH)
@@ -231,12 +235,11 @@ class RemoteProtocol(ProtobufProtocol):
             begin = RemoteMessage()
             begin.remote_voice_begin.session_id = session_id
             self._send_message(begin)
-            return int(session_id)
-        except:
-            self._on_voice_begin = None
-            raise
+            self._voice_session_id = int(session_id)
+            return self._voice_session_id
         finally:
-            self._voice_lock.release()
+            self._voice_starting = False
+            self._on_voice_begin = None
 
     def send_voice_chunk(self, chunk: bytes, session_id: int) -> None:
         """Send a chunk of PCM audio for the active voice session.
@@ -268,6 +271,8 @@ class RemoteProtocol(ProtobufProtocol):
         end = RemoteMessage()
         end.remote_voice_end.session_id = session_id
         self._send_message(end)
+        if self._voice_session_id == session_id:
+            self._voice_session_id = None
 
     def _handle_message(self, raw_msg: bytes) -> None:  # noqa: PLR0912,PLR0915
         """Handle a message from the server."""

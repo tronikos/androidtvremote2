@@ -42,6 +42,7 @@ repos:
           - cryptography
           - protobuf
           - pynput
+          - pytest
           - types-aiofiles
           - types-protobuf
           - types-pynput

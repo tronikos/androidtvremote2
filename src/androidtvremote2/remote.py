@@ -248,15 +248,16 @@ class RemoteProtocol(ProtobufProtocol):
         if self.transport is None or self.transport.is_closing():
             raise ConnectionClosed("Connection has been lost")
 
-        # Pad chunk to minimum chunk size
-        if len(chunk) < VOICE_CHUNK_MIN_SIZE:
-            chunk = chunk + b"\x00" * (VOICE_CHUNK_MIN_SIZE - len(chunk))
-
         # Limit chunk size, otherwise Android TV will close the connection
         for i in range(0, len(chunk), VOICE_CHUNK_SIZE):
+            samples = bytes(chunk[i : i + VOICE_CHUNK_SIZE])
+            # Pad to the minimum chunk size. This has to happen after splitting, since
+            # the last piece of a larger chunk can be smaller than the minimum as well.
+            if len(samples) < VOICE_CHUNK_MIN_SIZE:
+                samples = samples.ljust(VOICE_CHUNK_MIN_SIZE, b"\x00")
             msg = RemoteMessage()
             msg.remote_voice_payload.session_id = session_id
-            msg.remote_voice_payload.samples = chunk[i : i + VOICE_CHUNK_SIZE]
+            msg.remote_voice_payload.samples = samples
             self._send_message(msg, False)  # disable logging of voice data
 
     def end_voice(self, session_id: int) -> None:

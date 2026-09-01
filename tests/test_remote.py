@@ -8,7 +8,12 @@ from typing import TYPE_CHECKING
 
 import pytest
 
-from androidtvremote2.remote import Feature
+from androidtvremote2.exceptions import ConnectionClosed
+from androidtvremote2.remote import (
+    VOICE_CHUNK_MIN_SIZE,
+    VOICE_CHUNK_SIZE,
+    Feature,
+)
 from androidtvremote2.remotemessage_pb2 import RemoteDirection, RemoteKeyCode, RemoteMessage
 
 if TYPE_CHECKING:
@@ -311,6 +316,52 @@ async def yield_to_loop(times: int = 3) -> None:
     """Let pending callbacks run without advancing the clock meaningfully."""
     for _ in range(times):
         await asyncio.sleep(0)
+
+
+@pytest.mark.parametrize(
+    ("size", "expected"),
+    [
+        (0, []),
+        (100, [VOICE_CHUNK_MIN_SIZE]),
+        (VOICE_CHUNK_MIN_SIZE, [VOICE_CHUNK_MIN_SIZE]),
+        (VOICE_CHUNK_SIZE, [VOICE_CHUNK_SIZE]),
+        (VOICE_CHUNK_SIZE + 1, [VOICE_CHUNK_SIZE, VOICE_CHUNK_MIN_SIZE]),
+        (2 * VOICE_CHUNK_SIZE, [VOICE_CHUNK_SIZE, VOICE_CHUNK_SIZE]),
+        (80000, [VOICE_CHUNK_SIZE, VOICE_CHUNK_SIZE, VOICE_CHUNK_SIZE, 18560]),
+    ],
+)
+async def test_voice_chunks_are_split_and_padded(
+    remote_factory: Callable[..., RemoteHarness], size: int, expected: list[int]
+) -> None:
+    """Every payload is at most VOICE_CHUNK_SIZE and at least VOICE_CHUNK_MIN_SIZE.
+
+    Regression test: padding used to happen before splitting, so the trailing piece
+    of a chunk just over VOICE_CHUNK_SIZE was sent below the minimum size.
+    """
+    harness = remote_factory()
+    harness.protocol.send_voice_chunk(b"a" * size, 77)
+
+    payloads = [msg.remote_voice_payload.samples for msg in harness.sent()]
+    assert [len(p) for p in payloads] == expected
+    assert all(VOICE_CHUNK_MIN_SIZE <= len(p) <= VOICE_CHUNK_SIZE for p in payloads)
+    # The audio itself is preserved, only trailing silence is added.
+    assert b"".join(payloads).rstrip(b"\x00") == b"a" * size
+
+
+async def test_voice_chunk_payloads_carry_the_session_id(remote_factory: Callable[..., RemoteHarness]) -> None:
+    """Each payload is tagged with the session it belongs to."""
+    harness = remote_factory()
+    harness.protocol.send_voice_chunk(b"a" * (2 * VOICE_CHUNK_SIZE), 12)
+
+    assert [msg.remote_voice_payload.session_id for msg in harness.sent()] == [12, 12]
+
+
+async def test_send_voice_chunk_requires_a_connection(remote_factory: Callable[..., RemoteHarness]) -> None:
+    """Audio sent after the connection dropped raises instead of vanishing."""
+    harness = remote_factory()
+    harness.transport.close()
+    with pytest.raises(ConnectionClosed):
+        harness.protocol.send_voice_chunk(b"a" * VOICE_CHUNK_MIN_SIZE, 77)
 
 
 # --- idle disconnect ----------------------------------------------------------------

@@ -77,7 +77,7 @@ class AndroidTVRemote:
 
         :param client_name: client name. Will be shown on the Android TV during pairing.
         :param certfile: filename that contains the client certificate in PEM format.
-        :param keyfile: filename that contains the public key in PEM format.
+        :param keyfile: filename that contains the private key in PEM format.
         :param host: IP address of the Android TV.
         :param api_port: port for connecting and sending commands.
         :param pair_port: port for pairing.
@@ -210,7 +210,7 @@ class AndroidTVRemote:
         self._is_available_updated_callbacks.remove(callback)
 
     async def async_generate_cert_if_missing(self) -> bool:
-        """Generate client certificate and public key if missing.
+        """Generate client certificate and private key if missing.
 
         :returns: True if a new certificate was generated.
         """

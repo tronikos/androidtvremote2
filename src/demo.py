@@ -201,7 +201,7 @@ async def _main() -> None:
     )
     parser.add_argument(
         "--keyfile",
-        help="filename that contains the public key in PEM format",
+        help="filename that contains the private key in PEM format",
         default="key.pem",
     )
     parser.add_argument(
@@ -366,9 +366,11 @@ async def _stream_voice(remote: AndroidTVRemote, stop_event: asyncio.Event) -> N
                 _LOGGER.warning("Voice feature is not enabled in the client or not supported on the device")
                 return
 
+            loop = asyncio.get_running_loop()
+
             def callback(in_data: bytes, frame_count: object, time_info: object, status: object) -> tuple[bytes | None, int]:
                 _LOGGER.debug("MIC callback: frame_count=%d, time_info=%s, status=%s", frame_count, time_info, status)
-                session.send_chunk(in_data)
+                loop.call_soon_threadsafe(session.send_chunk, in_data)
                 return None, pyaudio.paContinue
 
             _LOGGER.info("Voice session established, opening microphone...")
@@ -382,31 +384,30 @@ async def _stream_voice(remote: AndroidTVRemote, stop_event: asyncio.Event) -> N
                 stream_callback=callback,
             )
 
-            _LOGGER.info("Recording started, sending data to Android TV...")
-            start = time.time()
+            try:
+                _LOGGER.info("Recording started, sending data to Android TV...")
+                start = time.time()
 
-            # Use run_in_executor to check stream status without blocking
-            loop = asyncio.get_running_loop()
-            # Wait until timeout, stop_event is set, or stream becomes inactive
-            while (time.time() - start) < VOICE_STREAM_SECONDS:
-                if stop_event.is_set():
-                    _LOGGER.debug("Recording stopped by external event")
-                    break
+                # Use run_in_executor to check stream status without blocking
+                # Wait until timeout, stop_event is set, or stream becomes inactive
+                while (time.time() - start) < VOICE_STREAM_SECONDS:
+                    if stop_event.is_set():
+                        _LOGGER.debug("Recording stopped by external event")
+                        break
 
-                if not await loop.run_in_executor(None, stream.is_active):
-                    _LOGGER.debug("Recording stopped: stream became inactive")
-                    break
+                    if not await loop.run_in_executor(None, stream.is_active):
+                        _LOGGER.debug("Recording stopped: stream became inactive")
+                        break
 
-                try:
-                    await asyncio.wait_for(stop_event.wait(), timeout=0.25)
-                    break
-                except asyncio.TimeoutError:
-                    pass
-
-        print("Voice data sent, closing microphone")
-
-        stream.close()
-        p.terminate()
+                    try:
+                        await asyncio.wait_for(stop_event.wait(), timeout=0.25)
+                        break
+                    except asyncio.TimeoutError:
+                        pass
+            finally:
+                print("Voice data sent, closing microphone")
+                stream.close()
+                p.terminate()
     except VoiceSessionInProgress:
         print("A voice session is already in progress.")
     except asyncio.TimeoutError as e:

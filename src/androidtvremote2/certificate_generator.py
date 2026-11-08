@@ -18,7 +18,7 @@ from cryptography.x509.oid import NameOID
 def generate_selfsigned_cert(hostname: str) -> tuple[bytes, bytes]:
     """Generate self signed certificate for a hostname.
 
-    :return: self signed certificate and public key in PEM format
+    :return: self signed certificate and private key in PEM format
     """
     key = rsa.generate_private_key(
         public_exponent=65537,

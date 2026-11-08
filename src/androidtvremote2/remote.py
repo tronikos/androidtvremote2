@@ -112,6 +112,8 @@ class RemoteProtocol(ProtobufProtocol):
         self.volume_info: VolumeInfo | None = None
         self.ime_counter: int = 0
         self.ime_field_counter: int = 0
+        self._has_ime_counter = False
+        self._has_ime_field_counter = False
         self._loop = loop
         self._idle_disconnect_task: asyncio.Task[None] | None = None
         self._reset_idle_disconnect_task()
@@ -170,9 +172,10 @@ class RemoteProtocol(ProtobufProtocol):
     def send_text(self, text: str) -> None:
         """Send a text string to Android TV via the input method.
 
-        The text length minus one is used for both `start` and `end` in the RemoteImeObject.
-        The `ime_counter` and `ime_field_counter` values are taken from self (batch_edit_info response),
-        which is populated when a message with a remote_ime_batch_edit field is received.
+        The text is inserted at the cursor, which is left after it: `start` and `end` are the text's length.
+        `ime_counter` and `ime_field_counter` come from the focused field's status (`remote_ime_key_inject`
+        and `remote_ime_show_request`), falling back to `remote_ime_batch_edit` when the key inject carries
+        no counter.
 
         :param text: The text string to be sent.
         """
@@ -181,8 +184,7 @@ class RemoteProtocol(ProtobufProtocol):
 
         self._reset_idle_disconnect_task()
         msg = RemoteMessage()
-        param_value = len(text) - 1
-        ime_object = RemoteImeObject(start=param_value, end=param_value, value=text)
+        ime_object = RemoteImeObject(start=len(text), end=len(text), value=text)
         edit_info = RemoteEditInfo(insert=1, text_field_status=ime_object)
         batch_edit = RemoteImeBatchEdit(
             ime_counter=self.ime_counter,
@@ -311,11 +313,22 @@ class RemoteProtocol(ProtobufProtocol):
         elif msg.HasField("remote_set_active"):
             new_msg.remote_set_active.active = self._active_features
         elif msg.HasField("remote_ime_key_inject"):
-            self.current_app = msg.remote_ime_key_inject.app_info.app_package
+            inject = msg.remote_ime_key_inject
+            self.current_app = inject.app_info.app_package
             self._on_current_app_updated(self.current_app)
+            self.ime_counter = inject.app_info.counter
+            self.ime_field_counter = inject.text_field_status.counter_field
+            self._has_ime_counter = bool(self.ime_counter)
+            self._has_ime_field_counter = bool(self.ime_field_counter)
+        elif msg.HasField("remote_ime_show_request"):
+            if msg.remote_ime_show_request.HasField("remote_text_field_status"):
+                self.ime_field_counter = msg.remote_ime_show_request.remote_text_field_status.counter_field
+                self._has_ime_field_counter = True
         elif msg.HasField("remote_ime_batch_edit"):
-            self.ime_counter = msg.remote_ime_batch_edit.ime_counter
-            self.ime_field_counter = msg.remote_ime_batch_edit.field_counter
+            if not self._has_ime_counter:
+                self.ime_counter = msg.remote_ime_batch_edit.ime_counter
+            if not self._has_ime_field_counter:
+                self.ime_field_counter = msg.remote_ime_batch_edit.field_counter
         elif msg.HasField("remote_set_volume_level"):
             self.volume_info = {
                 "level": msg.remote_set_volume_level.volume_level,

@@ -167,22 +167,65 @@ async def test_volume_level_updates_volume_info(remote_factory: Callable[..., Re
     assert harness.volume_info_updates == [{"level": 12, "max": 100, "muted": True}]
 
 
-async def test_ime_batch_edit_updates_the_counters_used_by_send_text(
+async def test_send_text_uses_the_focused_fields_counters(
     remote_factory: Callable[..., RemoteHarness],
 ) -> None:
-    """The counters echoed back in send_text come from the device."""
+    """ime_counter and ime_field_counter come from remote_ime_key_inject, not overwritten by batch_edit."""
     harness = remote_factory()
-    msg = RemoteMessage()
-    msg.remote_ime_batch_edit.ime_counter = 9
-    msg.remote_ime_batch_edit.field_counter = 4
-    harness.receive(msg)
+    inject = RemoteMessage()
+    inject.remote_ime_key_inject.app_info.app_package = "org.jellyfin.androidtv"
+    inject.remote_ime_key_inject.app_info.counter = 5
+    inject.remote_ime_key_inject.text_field_status.counter_field = 141
+    harness.receive(inject)
+    batch = RemoteMessage()
+    batch.remote_ime_batch_edit.ime_counter = 1
+    batch.remote_ime_batch_edit.field_counter = 1
+    harness.receive(batch)
 
-    assert (harness.protocol.ime_counter, harness.protocol.ime_field_counter) == (9, 4)
+    assert (harness.protocol.ime_counter, harness.protocol.ime_field_counter) == (5, 141)
 
     harness.protocol.send_text("hi")
     (sent,) = harness.sent()
-    assert sent.remote_ime_batch_edit.ime_counter == 9
-    assert sent.remote_ime_batch_edit.field_counter == 4
+    assert sent.remote_ime_batch_edit.ime_counter == 5
+    assert sent.remote_ime_batch_edit.field_counter == 141
+
+
+async def test_ime_show_request_updates_the_field_counter(
+    remote_factory: Callable[..., RemoteHarness],
+) -> None:
+    """A focused field announces updated counter_field in remote_ime_show_request."""
+    harness = remote_factory()
+    msg = RemoteMessage()
+    msg.remote_ime_show_request.remote_text_field_status.counter_field = 7
+    harness.receive(msg)
+
+    assert harness.protocol.ime_field_counter == 7
+
+
+async def test_ime_batch_edit_is_used_when_key_inject_has_no_counters(
+    remote_factory: Callable[..., RemoteHarness],
+) -> None:
+    """When key_inject carries zero counters, batch_edit counters are used and stale counters are cleared."""
+    harness = remote_factory()
+    inject = RemoteMessage()
+    inject.remote_ime_key_inject.app_info.app_package = "com.android.vending"
+    inject.remote_ime_key_inject.app_info.counter = 3
+    inject.remote_ime_key_inject.text_field_status.counter_field = 38
+    harness.receive(inject)
+    assert (harness.protocol.ime_counter, harness.protocol.ime_field_counter) == (3, 38)
+
+    # Switching to an app that reports 0 counters clears the previous app's counters.
+    youtube = RemoteMessage()
+    youtube.remote_ime_key_inject.app_info.app_package = "com.google.android.youtube.tv"
+    harness.receive(youtube)
+    assert (harness.protocol.ime_counter, harness.protocol.ime_field_counter) == (0, 0)
+
+    # A subsequent batch_edit populates the counters as fallback.
+    batch = RemoteMessage()
+    batch.remote_ime_batch_edit.ime_counter = 9
+    batch.remote_ime_batch_edit.field_counter = 4
+    harness.receive(batch)
+    assert (harness.protocol.ime_counter, harness.protocol.ime_field_counter) == (9, 4)
 
 
 async def test_remote_error_is_logged_as_an_error(
@@ -206,7 +249,7 @@ async def test_unhandled_message_is_logged_and_ignored(
     """A message this library has no branch for doesn't produce a reply."""
     harness = remote_factory()
     msg = RemoteMessage()
-    msg.remote_ime_show_request.SetInParent()
+    msg.remote_app_link_launch_request.app_link = "https://example.com"
     with caplog.at_level(logging.DEBUG, logger="androidtvremote2"):
         harness.receive(msg)
 
@@ -283,7 +326,7 @@ async def test_send_key_command_dispatches_the_text_prefix(remote_factory: Calla
 
 
 async def test_send_text_builds_the_batch_edit(remote_factory: Callable[..., RemoteHarness]) -> None:
-    """send_text uses len(text) - 1 for start and end, as the device expects."""
+    """send_text puts the cursor after the text: start and end are its length."""
     harness = remote_factory()
     harness.protocol.send_text("abcd")
 
@@ -291,8 +334,8 @@ async def test_send_text_builds_the_batch_edit(remote_factory: Callable[..., Rem
     edit = sent.remote_ime_batch_edit.edit_info[0]
     assert edit.insert == 1
     assert edit.text_field_status.value == "abcd"
-    assert edit.text_field_status.start == 3
-    assert edit.text_field_status.end == 3
+    assert edit.text_field_status.start == 4
+    assert edit.text_field_status.end == 4
 
 
 async def test_send_text_rejects_empty_text(remote_factory: Callable[..., RemoteHarness]) -> None:

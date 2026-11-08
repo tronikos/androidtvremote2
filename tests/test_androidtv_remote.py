@@ -17,6 +17,8 @@ from androidtvremote2.exceptions import ConnectionClosed, InvalidAuth
 from androidtvremote2.remote import VOICE_CHUNK_MIN_SIZE
 from androidtvremote2.remotemessage_pb2 import RemoteDirection, RemoteKeyCode, RemoteMessage
 
+from .conftest import FakeTransport, parse_written
+
 if TYPE_CHECKING:
     from collections.abc import Callable
     from pathlib import Path
@@ -232,6 +234,58 @@ async def test_disconnect_cancels_the_reconnect_task(remote: AndroidTVRemote, co
     await asyncio.sleep(0)
 
     assert reconnect_task.cancelled() or reconnect_task.done()
+    assert remote._reconnect_task is None
+
+
+async def test_keep_reconnecting_cancels_previous_reconnect_task(remote: AndroidTVRemote, connected: RemoteHarness) -> None:
+    """Calling keep_reconnecting() twice cancels the previous reconnect task."""
+    remote.keep_reconnecting()
+    first_task = remote._reconnect_task
+    assert first_task is not None
+
+    remote.keep_reconnecting()
+    second_task = remote._reconnect_task
+    await asyncio.sleep(0)
+
+    assert first_task.cancelled()
+    assert second_task is not None
+    assert not second_task.done()
+    remote.disconnect()
+
+
+async def test_cancelling_async_connect_closes_protocol_and_idle_task(
+    remote: AndroidTVRemote, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Cancelling async_connect while waiting for remote_start closes the transport and idle timer."""
+    await remote.async_generate_cert_if_missing()
+    fake_transport = FakeTransport()
+    connected_event = asyncio.Event()
+
+    async def fake_create_connection(
+        protocol_factory: Callable[[], object], *_args: object, **_kwargs: object
+    ) -> tuple[object, object]:
+        proto = protocol_factory()
+        proto.connection_made(fake_transport)  # type: ignore[attr-defined]
+        connected_event.set()
+        return fake_transport, proto
+
+    monkeypatch.setattr(remote._loop, "create_connection", fake_create_connection)
+
+    connect_task = asyncio.create_task(remote.async_connect())
+    await connected_event.wait()
+    await asyncio.sleep(0)
+
+    assert remote._remote_message_protocol is not None
+    idle_task = remote._remote_message_protocol._idle_disconnect_task
+    assert idle_task is not None
+
+    connect_task.cancel()
+    with pytest.raises(asyncio.CancelledError):
+        await connect_task
+
+    assert fake_transport.is_closing()
+    assert idle_task.cancelled()
+    assert parse_written(fake_transport.written, RemoteMessage) == []
 
 
 async def test_disconnect_is_idempotent(remote: AndroidTVRemote, connected: RemoteHarness) -> None:

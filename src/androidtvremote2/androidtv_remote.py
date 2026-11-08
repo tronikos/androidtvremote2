@@ -244,6 +244,8 @@ class AndroidTVRemote:
         :raises InvalidAuth: if pairing is needed first.
         """
         ssl_context = await self._create_ssl_context()
+        if self._remote_message_protocol:
+            self._remote_message_protocol.close()
         on_con_lost = self._loop.create_future()
         on_remote_started = self._loop.create_future()
         try:
@@ -271,8 +273,13 @@ class AndroidTVRemote:
                 raise InvalidAuth("Need to pair") from exc
             raise CannotConnect(f"Couldn't connect to {self.host}:{self._api_port}") from exc
 
-        await asyncio.wait((on_con_lost, on_remote_started), return_when=asyncio.FIRST_COMPLETED)
+        try:
+            await asyncio.wait((on_con_lost, on_remote_started), return_when=asyncio.FIRST_COMPLETED)
+        except BaseException:
+            self._remote_message_protocol.close()
+            raise
         if on_con_lost.done():
+            self._remote_message_protocol.close()
             con_lost_exc = on_con_lost.result()
             LOGGER.debug(
                 "Couldn't connect to %s:%s. Error: %s",
@@ -317,12 +324,15 @@ class AndroidTVRemote:
 
     def keep_reconnecting(self, invalid_auth_callback: Callable[[], None] | None = None) -> None:
         """Create a task to keep reconnecting whenever connection is lost."""
+        if self._reconnect_task:
+            self._reconnect_task.cancel()
         self._reconnect_task = self._loop.create_task(self._async_reconnect(invalid_auth_callback))
 
     def disconnect(self) -> None:
         """Disconnect any open connections."""
         if self._reconnect_task:
             self._reconnect_task.cancel()
+            self._reconnect_task = None
         if self._remote_message_protocol:
             self._remote_message_protocol.close()
             self._remote_message_protocol = None

@@ -34,6 +34,11 @@ def _create_message() -> OuterMessage:
     return msg
 
 
+def _int_to_bytes(val: int) -> bytes:
+    """Convert a positive integer to big-endian bytes."""
+    return val.to_bytes((val.bit_length() + 7) // 8, "big")
+
+
 def _get_modulus_and_exponent(cert: x509.Certificate) -> tuple[int, int]:
     """Extract modulus and exponent from a certificate."""
     public_numbers = cert.public_key().public_numbers()  # type: ignore[union-attr]
@@ -113,10 +118,10 @@ class PairingProtocol(ProtobufProtocol):
         server_modulus, server_exponent = _get_modulus_and_exponent(server_cert)
 
         h = hashlib.sha256()
-        h.update(bytes.fromhex(f"{client_modulus:X}"))
-        h.update(bytes.fromhex(f"0{client_exponent:X}"))
-        h.update(bytes.fromhex(f"{server_modulus:X}"))
-        h.update(bytes.fromhex(f"0{server_exponent:X}"))
+        h.update(_int_to_bytes(client_modulus))
+        h.update(_int_to_bytes(client_exponent))
+        h.update(_int_to_bytes(server_modulus))
+        h.update(_int_to_bytes(server_exponent))
         h.update(bytes.fromhex(pairing_code[2:]))
         hash_result = h.digest()
 

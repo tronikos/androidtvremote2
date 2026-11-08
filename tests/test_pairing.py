@@ -74,10 +74,8 @@ def expected_pin(client_cert_pem: bytes, server_cert_pem: bytes, nonce: str) -> 
     client_n, client_e = modulus_and_exponent(client_cert_pem)
     server_n, server_e = modulus_and_exponent(server_cert_pem)
     h = hashlib.sha256()
-    h.update(bytes.fromhex(f"{client_n:X}"))
-    h.update(bytes.fromhex(f"0{client_e:X}"))
-    h.update(bytes.fromhex(f"{server_n:X}"))
-    h.update(bytes.fromhex(f"0{server_e:X}"))
+    for val in (client_n, client_e, server_n, server_e):
+        h.update(val.to_bytes((val.bit_length() + 7) // 8, "big"))
     h.update(bytes.fromhex(nonce))
     return f"{h.digest()[0]:02X}{nonce}"
 
@@ -145,6 +143,29 @@ async def test_finish_pairing_sends_the_secret(
     (secret,) = pairing.sent()
     assert len(secret.secret.secret) == 32
     assert secret.secret.secret[0] == int(pin[0:2], 16)
+
+
+async def test_finish_pairing_handles_odd_hex_length_modulus_and_even_hex_exponent(
+    pairing: PairingHarness, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Moduli with an odd number of hex digits or 2-nibble exponents don't fail bytes conversion."""
+    await run_start_pairing(pairing)
+    pairing.clear()
+    # 0xabc has 3 hex digits (odd); 0x11 (17) has 2 hex digits (would be 3 with a leading '0').
+    monkeypatch.setattr("androidtvremote2.pairing._get_modulus_and_exponent", lambda _cert: (0xABC, 0x11))
+    h = hashlib.sha256()
+    for val in (0xABC, 0x11, 0xABC, 0x11):
+        h.update(val.to_bytes((val.bit_length() + 7) // 8, "big"))
+    h.update(bytes.fromhex("ABCD"))
+    pin = f"{h.digest()[0]:02X}ABCD"
+
+    task = asyncio.ensure_future(pairing.protocol.async_finish_pairing(pin))
+    await wait_until_sent(pairing, 1)
+    pairing.receive(device_msg("secret_ack", secret=b"\x00" * 32))
+    await task
+
+    (secret,) = pairing.sent()
+    assert secret.secret.secret == h.digest()
 
 
 async def test_duplicate_acks_do_not_raise(pairing: PairingHarness) -> None:
